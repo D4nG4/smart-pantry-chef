@@ -1,78 +1,55 @@
-# 🥗 Smart Pantry Chef
+# 🥗 Smart Pantry Chef — v2.0 Premium
 
-Aplicativo de gestão inteligente de despensa com IA.
+Design escuro premium com fotos reais de comida, tipografia elegante e visual de app profissional.
 
----
-
-## 📁 Estrutura de arquivos
+## 📁 Arquivos
 
 ```
 smart-pantry-chef/
-├── index.html              ← Página principal
-├── package.json            ← Lista de dependências
-├── vite.config.js          ← Configuração do projeto
+├── index.html
+├── package.json
+├── vite.config.js
 └── src/
-    ├── main.jsx            ← Ponto de entrada do React
-    ├── App.jsx             ← App completo (todas as telas)
-    └── supabaseClient.js   ← Conexão com o banco de dados
+    ├── main.jsx
+    ├── App.jsx          ← App completo v2 (design premium)
+    └── supabaseClient.js
 ```
 
----
+## 🚀 Como subir no GitHub e publicar
 
-## 🚀 Como publicar no GitHub e Vercel
+### Passo 1 — GitHub
+1. Abra seu repositório `smart-pantry-chef` no GitHub
+2. Clique em **"Add file" → "Upload files"**
+3. Arraste TODOS os arquivos desta pasta (incluindo a pasta `src`)
+4. Se já tem arquivos antigos: substitua — os novos são a versão atualizada
+5. Clique em **"Commit changes"**
 
-### PASSO 1 — Subir no GitHub
+### Passo 2 — Vercel (redeploy automático)
+Se você já conectou o repositório ao Vercel antes:
+- O Vercel vai detectar a mudança automaticamente e publicar a nova versão
+- Em ~2 minutos seu link estará com o novo design
 
-1. Acesse github.com e abra o repositório `smart-pantry-chef`
-2. Clique em **"uploading an existing file"**
-3. Arraste TODOS os arquivos desta pasta
-4. Clique em **"Commit changes"**
+Se ainda não conectou ao Vercel:
+1. Acesse vercel.com → "Add New Project"
+2. Selecione o repositório `smart-pantry-chef`
+3. Clique "Deploy"
 
-> ⚠️ Importante: suba a pasta `src` como uma pasta, não arquivos soltos.
-> No GitHub, você pode criar a pasta clicando em "Add file" → "Create new file"
-> e digitando `src/main.jsx` no nome — ele cria a pasta automaticamente.
+### Passo 3 — Ativar Google Login
+No Supabase: Authentication → Sign In / Providers → Google → Ativar
 
-### PASSO 2 — Publicar com Vercel (GRATUITO)
+## ✨ O que mudou no v2.0
 
-1. Acesse **vercel.com**
-2. Clique em **"Sign up"** e entre com sua conta do **GitHub**
-3. Clique em **"Add New Project"**
-4. Selecione o repositório **smart-pantry-chef**
-5. Deixe todas as configurações no padrão
-6. Clique em **"Deploy"**
+- Tema escuro premium (fundo verde-floresta profundo)
+- Tipografia: Playfair Display + DM Sans
+- Cards de receita com fotos reais (Unsplash)
+- Efeito glow verde nos destaques
+- Sidebar elegante com chip do usuário
+- Tela de login com gradiente ambiente
+- Animações e micro-interações refinadas
+- Totalmente bilíngue PT/EN
 
-Aguarde ~2 minutos. Você receberá um link tipo:
-`https://smart-pantry-chef.vercel.app`
+## 🔌 Funcionalidades com Supabase
 
-✅ Pronto! Seu app está no ar!
-
-### PASSO 3 — Ativar login com Google no Supabase
-
-1. Acesse supabase.com → seu projeto
-2. Vá em **Authentication → Providers**
-3. Clique em **Google** e ative
-4. Você vai precisar criar credenciais no Google Cloud Console
-   (o Supabase tem um guia passo a passo ao ativar)
-
----
-
-## 🔧 Funcionalidades implementadas
-
-- ✅ Login com email/senha
-- ✅ Login com Google
-- ✅ Despensa com dados salvos no banco
-- ✅ Adicionar e remover ingredientes
-- ✅ Alertas de validade
-- ✅ Receitas com % de compatibilidade
-- ✅ Lista de compras salva no banco
-- ✅ Cardápio semanal
-- ✅ Score de desperdício
-- ✅ Chat com IA (Chef IA)
-- ✅ Bilíngue PT/EN
-
----
-
-## 📞 Suporte
-
-Se travar em qualquer etapa, volte ao Claude e descreva
-exatamente onde parou. Estarei aqui para ajudar!
+Para conectar a despensa ao banco real, substitua as funções
+de `addItem` e `deleteItem` na seção Pantry para usar `supabase.from("pantry_items")`.
+O arquivo `supabaseClient.js` já está configurado com suas chaves.

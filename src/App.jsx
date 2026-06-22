@@ -1,469 +1,645 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "./supabaseClient";
 
-// ── Language strings ──────────────────────────────────────────────────────────
-const T = {
-  en: {
-    appName: "Smart Pantry Chef",
-    tagline: "Transform Your Pantry Into Meals",
-    nav: { dashboard: "Dashboard", pantry: "My Pantry", recipes: "Recipes", shopping: "Shopping", planner: "Meal Planner", waste: "Waste Score" },
-    auth: { welcome: "Welcome to Smart Pantry Chef", subtitle: "Sign in to save your pantry and recipes", email: "Email address", password: "Password", signin: "Sign In", signup: "Create Account", toggle_signin: "Already have an account? Sign in", toggle_signup: "No account yet? Create one", or: "or", google: "Continue with Google", loading: "Loading…", error: "Something went wrong. Try again." },
-    dashboard: { title: "Good morning! 👋", subtitle: "Here's what's happening in your kitchen today.", expiring: "Expiring Soon", recipes_ready: "Recipes Ready", pantry_value: "Pantry Value", waste_score: "Waste Score", urgent: "Urgent", cook_before: "Cook Before They Expire", view_all: "View All", days: "days", expires_tomorrow: "Expires tomorrow", expires_in: "Expires in" },
-    pantry: { title: "My Pantry", subtitle: "Track everything you have at home", add: "Add Item", search: "Search ingredients…", categories: ["All", "Fridge", "Freezer", "Pantry", "Spices"], expires: "Expires", qty: "Qty", location: "Location", add_modal_title: "Add Ingredient", name: "Name", quantity: "Quantity", unit: "Unit", category: "Category", exp_date: "Expiration Date", save: "Save", cancel: "Cancel", import_receipt: "📷 Scan Receipt", voice: "🎙️ Voice", barcode: "📊 Barcode", empty: "Your pantry is empty. Add your first ingredient!", deleting: "Removing…" },
-    recipes: { title: "Recipes For You", subtitle: "Based on what you already have", can_cook: "Can Cook Now", almost: "Almost Ready", shopping_needed: "Need Shopping", match: "match", missing: "Missing", ingredients: "ingredients", minutes: "min", servings: "servings", difficulty: ["Easy", "Medium", "Hard"], watch_video: "▶ Watch Recipe Video", cook_now: "Start Cooking", save: "Save Recipe" },
-    shopping: { title: "Shopping List", subtitle: "What you need to buy", add_item: "Add Item", clear: "Clear Checked", generate: "From Recipe", total_est: "Estimated Total", items: "items", empty: "Your shopping list is empty." },
-    waste: { title: "Food Waste Score", subtitle: "Track your impact on the environment & wallet", score_label: "Your Score", this_month: "This Month", money_saved: "Money Saved", rescued: "Items Rescued", cooked: "Recipes Cooked", reduction: "Waste Reduced", excellent: "Excellent! Keep it up 🌱", good: "Good job! Small improvements ahead 👍", average: "Room to improve — let's reduce waste 💪" },
-    ai: { title: "AI Chef Assistant", placeholder: "Tell me what you have…", send: "Ask", thinking: "Thinking…", greeting: "Hi! I'm your AI Chef. Tell me what ingredients you have and I'll suggest recipes!" },
-    lang: "PT", signout: "Sign Out",
-  },
-  pt: {
-    appName: "Smart Pantry Chef",
-    tagline: "Transforme Sua Despensa em Refeições",
-    nav: { dashboard: "Início", pantry: "Minha Despensa", recipes: "Receitas", shopping: "Compras", planner: "Cardápio", waste: "Desperdício" },
-    auth: { welcome: "Bem-vindo ao Smart Pantry Chef", subtitle: "Entre para salvar sua despensa e receitas", email: "Endereço de e-mail", password: "Senha", signin: "Entrar", signup: "Criar Conta", toggle_signin: "Já tem conta? Entrar", toggle_signup: "Não tem conta? Criar agora", or: "ou", google: "Continuar com Google", loading: "Carregando…", error: "Algo deu errado. Tente novamente." },
-    dashboard: { title: "Bom dia! 👋", subtitle: "Veja o que está acontecendo na sua cozinha hoje.", expiring: "Vencendo em Breve", recipes_ready: "Receitas Prontas", pantry_value: "Valor da Despensa", waste_score: "Score de Desperdício", urgent: "Urgente", cook_before: "Cozinhe Antes que Vença", view_all: "Ver Tudo", days: "dias", expires_tomorrow: "Vence amanhã", expires_in: "Vence em" },
-    pantry: { title: "Minha Despensa", subtitle: "Acompanhe tudo que você tem em casa", add: "Adicionar", search: "Buscar ingredientes…", categories: ["Todos", "Geladeira", "Freezer", "Despensa", "Temperos"], expires: "Vence", qty: "Qtd", location: "Local", add_modal_title: "Adicionar Ingrediente", name: "Nome", quantity: "Quantidade", unit: "Unidade", category: "Categoria", exp_date: "Data de Validade", save: "Salvar", cancel: "Cancelar", import_receipt: "📷 Escanear Nota", voice: "🎙️ Voz", barcode: "📊 Código de Barras", empty: "Sua despensa está vazia. Adicione seu primeiro ingrediente!", deleting: "Removendo…" },
-    recipes: { title: "Receitas Para Você", subtitle: "Com base no que você já tem", can_cook: "Pode Cozinhar Agora", almost: "Quase Pronto", shopping_needed: "Precisa Comprar", match: "compatível", missing: "Faltando", ingredients: "ingredientes", minutes: "min", servings: "porções", difficulty: ["Fácil", "Médio", "Difícil"], watch_video: "▶ Ver Vídeo da Receita", cook_now: "Começar a Cozinhar", save: "Salvar Receita" },
-    shopping: { title: "Lista de Compras", subtitle: "O que você precisa comprar", add_item: "Adicionar Item", clear: "Limpar Marcados", generate: "Da Receita", total_est: "Total Estimado", items: "itens", empty: "Sua lista de compras está vazia." },
-    waste: { title: "Score de Desperdício", subtitle: "Acompanhe seu impacto no ambiente e na carteira", score_label: "Seu Score", this_month: "Este Mês", money_saved: "Dinheiro Economizado", rescued: "Itens Resgatados", cooked: "Receitas Cozidas", reduction: "Desperdício Evitado", excellent: "Excelente! Continue assim 🌱", good: "Bom trabalho! Pequenas melhorias à frente 👍", average: "Dá para melhorar — vamos reduzir o desperdício 💪" },
-    ai: { title: "Assistente Chef IA", placeholder: "Me diga o que você tem…", send: "Perguntar", thinking: "Pensando…", greeting: "Olá! Sou seu Chef IA. Me diga quais ingredientes você tem e eu sugiro as melhores receitas!" },
-    lang: "EN", signout: "Sair",
-  },
-};
-
-// ── Static Recipes (local) ────────────────────────────────────────────────────
-const RECIPES = [
-  { id: 1, title: "Omelete de Queijo / Cheese Omelette", cuisine: "Brazilian", time: 15, servings: 2, difficulty: 0, match: 100, missing: [], calories: 320, protein: 24, category: "Breakfast", emoji: "🍳", description: "Fluffy omelette packed with melted mozzarella.", ingredients: ["Eggs", "Mozzarella", "Salt", "Olive Oil"], steps: ["Beat 3 eggs with a pinch of salt.", "Heat olive oil in a non-stick pan.", "Pour eggs and cook until edges set.", "Add mozzarella, fold and serve."], videoChannel: "Chef João", videoDuration: "8:32", videoViews: "2.4M" },
-  { id: 2, title: "Risoto de Cogumelos / Mushroom Risotto", cuisine: "Italian", time: 35, servings: 4, difficulty: 1, match: 85, missing: ["Arborio Rice", "White Wine"], calories: 480, protein: 12, category: "Dinner", emoji: "🍲", description: "Creamy Italian risotto with sautéed mushrooms.", ingredients: ["Mushrooms", "Onion", "Garlic", "Olive Oil"], steps: ["Sauté onion and garlic.", "Add mushrooms, cook until golden.", "Add rice and broth gradually.", "Finish with parmesan."], videoChannel: "Cucina Italia", videoDuration: "12:15", videoViews: "890K" },
-  { id: 3, title: "Frango ao Alho / Garlic Chicken", cuisine: "Brazilian", time: 45, servings: 4, difficulty: 1, match: 95, missing: ["Lemon"], calories: 520, protein: 48, category: "Dinner", emoji: "🍗", description: "Juicy chicken with crispy garlic crust.", ingredients: ["Chicken", "Garlic", "Olive Oil", "Salt"], steps: ["Season chicken with garlic and salt.", "Marinate 30 min.", "Sear in olive oil 4 min each side.", "Finish in oven 180°C for 15 min."], videoChannel: "Sabores do Brasil", videoDuration: "18:40", videoViews: "3.1M" },
-  { id: 4, title: "Arroz com Feijão / Rice & Beans", cuisine: "Brazilian", time: 40, servings: 6, difficulty: 0, match: 100, missing: [], calories: 380, protein: 14, category: "Lunch", emoji: "🍚", description: "The classic Brazilian comfort food duo.", ingredients: ["Rice", "Beans", "Garlic", "Onion"], steps: ["Cook beans in pressure cooker 20 min.", "Sauté garlic and onion.", "Season beans to taste.", "Cook rice and serve together."], videoChannel: "Receitas Brasileiras", videoDuration: "22:10", videoViews: "5.7M" },
-  { id: 5, title: "Salada Caprese / Caprese Salad", cuisine: "Italian", time: 10, servings: 2, difficulty: 0, match: 100, missing: [], calories: 220, protein: 14, category: "Lunch", emoji: "🥗", description: "Fresh tomato and mozzarella with olive oil.", ingredients: ["Tomato", "Mozzarella", "Olive Oil", "Salt"], steps: ["Slice tomatoes and mozzarella.", "Layer on a plate.", "Drizzle with olive oil.", "Add salt and fresh basil."], videoChannel: "Italian Kitchen", videoDuration: "6:20", videoViews: "1.2M" },
-  { id: 6, title: "Macarrão ao Sugo / Tomato Pasta", cuisine: "Italian", time: 25, servings: 4, difficulty: 0, match: 70, missing: ["Pasta", "Basil"], calories: 420, protein: 16, category: "Dinner", emoji: "🍝", description: "Simple classic tomato sauce pasta.", ingredients: ["Tomato", "Garlic", "Onion", "Olive Oil"], steps: ["Cook pasta in salted water.", "Sauté garlic and onion.", "Add tomatoes, simmer 15 min.", "Toss pasta in sauce."], videoChannel: "Pasta Masters", videoDuration: "14:55", videoViews: "4.3M" },
-];
-
-const WEEK_DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-const WEEK_DAYS_PT = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
-const MEAL_PLAN = {
-  Mon: { breakfast: "Cheese Omelette 🍳", lunch: "Rice & Beans 🍚", dinner: null, snack: null },
-  Tue: { breakfast: null, lunch: "Caprese Salad 🥗", dinner: "Garlic Chicken 🍗", snack: null },
-  Wed: { breakfast: null, lunch: null, dinner: "Mushroom Risotto 🍲", snack: null },
-  Thu: { breakfast: "Cheese Omelette 🍳", lunch: "Rice & Beans 🍚", dinner: null, snack: null },
-  Fri: { breakfast: null, lunch: null, dinner: "Tomato Pasta 🍝", snack: null },
-  Sat: { breakfast: null, lunch: "Caprese Salad 🥗", dinner: "Garlic Chicken 🍗", snack: null },
-  Sun: { breakfast: null, lunch: "Rice & Beans 🍚", dinner: null, snack: null },
-};
-
-// ── CSS ───────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// DESIGN TOKENS — Dark Premium Kitchen Theme
+// ─────────────────────────────────────────────
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,600;1,400&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --g50:#f0faf4;--g100:#dcf4e6;--g400:#48bb78;--g500:#38a169;--g600:#2f855a;
-    --o100:#fff3e0;--o400:#f6a623;--o500:#ed8936;--o600:#dd6b20;
-    --r100:#fff5f5;--r400:#f56565;--r500:#e53e3e;
-    --gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;--gray300:#cbd5e1;
-    --gray400:#94a3b8;--gray500:#64748b;--gray600:#475569;--gray700:#334155;
-    --gray800:#1e293b;--gray900:#0f172a;--white:#fff;
-    --shadow-sm:0 1px 3px rgba(0,0,0,.06);
-    --shadow-md:0 4px 12px rgba(0,0,0,.08);
-    --shadow-lg:0 10px 30px rgba(0,0,0,.10);
-    --r-sm:8px;--r-md:12px;--r-lg:18px;--r-xl:24px;
-    --font:'Plus Jakarta Sans',system-ui,sans-serif;
-    --display:'Lora',Georgia,serif;
-  }
-  html,body{height:100%;font-family:var(--font);background:var(--gray50);color:var(--gray800);}
-  #root{height:100%;}
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
-  /* Auth */
-  .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--g50) 0%,var(--o100) 100%);padding:20px;}
-  .auth-card{background:var(--white);border-radius:var(--r-xl);padding:40px;max-width:420px;width:100%;box-shadow:var(--shadow-lg);border:1px solid var(--gray100);}
-  .auth-logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:28px;}
-  .auth-logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--g500),var(--o400));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;}
-  .auth-logo-name{font-family:var(--display);font-size:20px;font-weight:600;color:var(--gray900);}
-  .auth-title{font-size:22px;font-weight:800;color:var(--gray900);text-align:center;margin-bottom:6px;}
-  .auth-sub{font-size:14px;color:var(--gray400);text-align:center;margin-bottom:28px;}
-  .auth-google{width:100%;padding:12px;border:1.5px solid var(--gray200);border-radius:var(--r-md);background:var(--white);cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .15s;color:var(--gray700);}
-  .auth-google:hover{border-color:var(--g400);color:var(--g600);background:var(--g50);}
-  .auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;}
-  .auth-divider-line{flex:1;height:1px;background:var(--gray200);}
-  .auth-divider-text{font-size:12px;color:var(--gray400);font-weight:500;}
-  .auth-field{margin-bottom:16px;}
-  .auth-label{font-size:13px;font-weight:600;color:var(--gray600);margin-bottom:6px;display:block;}
-  .auth-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray200);border-radius:var(--r-md);font-size:14px;font-family:var(--font);outline:none;transition:border-color .15s;}
-  .auth-input:focus{border-color:var(--g400);box-shadow:0 0 0 3px rgba(72,187,120,.12);}
-  .auth-btn{width:100%;padding:13px;background:var(--g500);color:var(--white);border:none;border-radius:var(--r-md);font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;font-family:var(--font);}
-  .auth-btn:hover{background:var(--g600);}
-  .auth-btn:disabled{opacity:.6;cursor:not-allowed;}
-  .auth-toggle{text-align:center;margin-top:20px;font-size:13px;color:var(--gray500);}
-  .auth-toggle button{color:var(--g600);font-weight:700;background:none;border:none;cursor:pointer;}
-  .auth-error{background:var(--r100);color:var(--r500);padding:10px 14px;border-radius:var(--r-sm);font-size:13px;margin-bottom:16px;font-weight:500;}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Shell */
-  .app-shell{display:flex;height:100vh;overflow:hidden;}
-  .sidebar{width:240px;min-width:240px;background:var(--white);border-right:1px solid var(--gray100);display:flex;flex-direction:column;padding:0 0 24px;z-index:10;}
-  .sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid var(--gray100);}
-  .logo-mark{display:flex;align-items:center;gap:10px;}
-  .logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--g500),var(--o400));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
-  .logo-text{font-size:14px;font-weight:700;color:var(--gray800);line-height:1.2;}
-  .logo-sub{font-size:11px;color:var(--gray400);}
-  .nav-section{padding:16px 12px 0;flex:1;}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;margin-bottom:2px;transition:all .15s;font-size:13.5px;font-weight:500;color:var(--gray600);border:none;background:none;width:100%;text-align:left;}
-  .nav-item:hover{background:var(--gray50);color:var(--gray800);}
-  .nav-item.active{background:var(--g50);color:var(--g600);font-weight:600;}
-  .nav-emoji{font-size:16px;width:20px;text-align:center;}
-  .sidebar-footer{padding:0 12px;display:flex;flex-direction:column;gap:6px;}
-  .lang-btn{padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--gray200);background:var(--white);cursor:pointer;font-size:12px;font-weight:600;color:var(--gray500);transition:all .15s;display:flex;align-items:center;gap:6px;}
-  .lang-btn:hover{border-color:var(--g400);color:var(--g600);}
-  .signout-btn{padding:8px 12px;border-radius:var(--r-sm);border:1px solid var(--r100);background:var(--white);cursor:pointer;font-size:12px;font-weight:600;color:var(--r500);transition:all .15s;display:flex;align-items:center;gap:6px;}
-  .signout-btn:hover{background:var(--r100);}
-  .main-content{flex:1;overflow-y:auto;background:var(--gray50);}
-  .page{padding:32px 36px;max-width:1100px;}
-  .page-header{margin-bottom:28px;}
-  .page-title{font-family:var(--display);font-size:26px;font-weight:600;color:var(--gray900);}
-  .page-subtitle{font-size:14px;color:var(--gray400);margin-top:4px;}
+:root {
+  /* Core palette */
+  --ink:       #0A1A10;
+  --ink-2:     #0F2318;
+  --ink-3:     #162E1C;
+  --ink-4:     #1E3D27;
+  --border:    rgba(255,255,255,0.07);
+  --border-2:  rgba(255,255,255,0.12);
 
-  /* Stats */
-  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
-  .stat-card{background:var(--white);border-radius:var(--r-lg);padding:20px 24px;border:1px solid var(--gray100);box-shadow:var(--shadow-sm);}
-  .stat-icon{font-size:22px;margin-bottom:10px;}
-  .stat-label{font-size:12px;color:var(--gray400);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
-  .stat-number{font-size:30px;font-weight:800;color:var(--gray900);line-height:1;margin:4px 0;}
-  .stat-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
-  .badge-red{background:var(--r100);color:var(--r500);}
-  .badge-orange{background:var(--o100);color:var(--o600);}
-  .badge-green{background:var(--g100);color:var(--g600);}
+  /* Accent */
+  --green:     #2ECC71;
+  --green-dim: #1A8A4A;
+  --green-glow:rgba(46,204,113,0.18);
+  --amber:     #F39C12;
+  --amber-dim: #C27D0E;
+  --red:       #E74C3C;
+  --red-dim:   rgba(231,76,60,0.15);
 
-  /* Expiry */
-  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-  .section-title{font-size:16px;font-weight:700;color:var(--gray800);}
-  .view-all-btn{font-size:13px;color:var(--g600);font-weight:600;cursor:pointer;background:none;border:none;}
-  .expiry-list{display:flex;flex-direction:column;gap:10px;}
-  .expiry-item{background:var(--white);border-radius:var(--r-md);padding:14px 18px;display:flex;align-items:center;gap:14px;border:1px solid var(--gray100);box-shadow:var(--shadow-sm);}
-  .expiry-item.urgent{border-left:3px solid var(--r400);}
-  .expiry-item.soon{border-left:3px solid var(--o400);}
-  .expiry-emoji{font-size:24px;}
-  .expiry-name{font-size:14px;font-weight:600;color:var(--gray800);}
-  .expiry-days{font-size:12px;margin-top:2px;}
-  .expiry-days.urgent{color:var(--r500);font-weight:600;}
-  .expiry-days.soon{color:var(--o500);font-weight:600;}
-  .expiry-recipe-btn{margin-left:auto;font-size:12px;font-weight:600;background:var(--g50);color:var(--g600);border:1px solid var(--g100);border-radius:20px;padding:4px 12px;cursor:pointer;white-space:nowrap;transition:all .15s;}
-  .expiry-recipe-btn:hover{background:var(--g500);color:var(--white);}
+  /* Text */
+  --text-1:  #F0F7F2;
+  --text-2:  #A8C4B0;
+  --text-3:  #5A8066;
 
-  /* Buttons */
-  .btn{padding:10px 18px;border-radius:var(--r-md);border:none;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font);display:inline-flex;align-items:center;gap:6px;}
-  .btn-primary{background:var(--g500);color:var(--white);}
-  .btn-primary:hover{background:var(--g600);transform:translateY(-1px);box-shadow:var(--shadow-md);}
-  .btn-secondary{background:var(--white);color:var(--gray700);border:1px solid var(--gray200);}
-  .btn-secondary:hover{background:var(--gray50);border-color:var(--gray300);}
-  .btn-orange{background:var(--o500);color:var(--white);}
-  .btn-orange:hover{background:var(--o600);}
-  .btn-sm{padding:6px 12px;font-size:12px;}
-  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  /* Shadows */
+  --s1: 0 2px 8px rgba(0,0,0,0.4);
+  --s2: 0 8px 24px rgba(0,0,0,0.5);
+  --s3: 0 20px 60px rgba(0,0,0,0.6);
 
-  /* Pantry */
-  .pantry-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
-  .search-input{flex:1;min-width:200px;padding:10px 16px;border:1px solid var(--gray200);border-radius:var(--r-md);font-size:14px;font-family:var(--font);outline:none;background:var(--white);transition:border-color .15s;}
-  .search-input:focus{border-color:var(--g400);box-shadow:0 0 0 3px rgba(72,187,120,.15);}
-  .cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
-  .cat-tab{padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--gray200);background:var(--white);color:var(--gray500);}
-  .cat-tab.active{background:var(--g500);color:var(--white);border-color:var(--g500);}
-  .pantry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
-  .pantry-card{background:var(--white);border-radius:var(--r-md);padding:16px;border:1px solid var(--gray100);box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s;position:relative;}
-  .pantry-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
-  .pantry-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
-  .pantry-emoji-circle{width:44px;height:44px;background:var(--g50);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
-  .days-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;}
-  .days-urgent{background:var(--r100);color:var(--r500);}
-  .days-soon{background:var(--o100);color:var(--o600);}
-  .days-ok{background:var(--g100);color:var(--g600);}
-  .pantry-name{font-size:14px;font-weight:700;color:var(--gray800);}
-  .pantry-details{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
-  .pantry-detail-item{font-size:12px;color:var(--gray400);}
-  .pantry-detail-item span{font-weight:600;color:var(--gray600);}
-  .delete-btn{position:absolute;top:10px;right:10px;background:none;border:none;font-size:14px;cursor:pointer;color:var(--gray300);opacity:0;transition:opacity .15s;}
-  .pantry-card:hover .delete-btn{opacity:1;}
-  .delete-btn:hover{color:var(--r500);}
-  .empty-state{text-align:center;padding:60px 20px;color:var(--gray400);}
-  .empty-state-emoji{font-size:52px;margin-bottom:16px;}
-  .empty-state-text{font-size:15px;}
+  /* Radius */
+  --r1: 8px; --r2: 14px; --r3: 20px; --r4: 28px;
 
-  /* Modal */
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
-  .modal{background:var(--white);border-radius:var(--r-xl);max-width:560px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,.2);}
-  .modal-header{padding:24px 24px 16px;border-bottom:1px solid var(--gray100);display:flex;align-items:flex-start;gap:16px;}
-  .modal-emoji{font-size:40px;}
-  .modal-title{font-family:var(--display);font-size:20px;font-weight:600;color:var(--gray900);}
-  .modal-subtitle{font-size:13px;color:var(--gray400);margin-top:4px;}
-  .modal-close{margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray400);padding:4px 8px;}
-  .modal-body{padding:20px 24px;}
-  .modal-section{margin-bottom:20px;}
-  .modal-section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray400);margin-bottom:12px;}
-  .modal-footer{padding:16px 24px;border-top:1px solid var(--gray100);display:flex;gap:10px;justify-content:flex-end;}
-  .form-group{margin-bottom:16px;}
-  .form-label{font-size:13px;font-weight:600;color:var(--gray600);margin-bottom:6px;display:block;}
-  .form-input{width:100%;padding:10px 14px;border:1px solid var(--gray200);border-radius:var(--r-md);font-size:14px;font-family:var(--font);outline:none;transition:border-color .15s;}
-  .form-input:focus{border-color:var(--g400);box-shadow:0 0 0 3px rgba(72,187,120,.12);}
-  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  --font: 'DM Sans', system-ui, sans-serif;
+  --display: 'Playfair Display', Georgia, serif;
+}
 
-  /* Recipes */
-  .recipe-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-  .recipe-tab{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);transition:all .15s;display:flex;align-items:center;gap:6px;}
-  .recipe-tab.active{background:var(--g500);color:var(--white);border-color:var(--g500);}
-  .recipe-count{font-size:11px;background:var(--gray100);color:var(--gray400);border-radius:10px;padding:1px 6px;}
-  .recipe-tab.active .recipe-count{background:rgba(255,255,255,.3);color:var(--white);}
-  .recipes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;}
-  .recipe-card{background:var(--white);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--gray100);box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s;cursor:pointer;}
-  .recipe-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
-  .recipe-banner{height:120px;display:flex;align-items:center;justify-content:center;font-size:52px;position:relative;}
-  .recipe-banner-100{background:linear-gradient(135deg,#dcf4e6,#f0faf4);}
-  .recipe-banner-95{background:linear-gradient(135deg,#e8f5e9,#f1f8e9);}
-  .recipe-banner-85{background:linear-gradient(135deg,#fff3e0,#fff8f0);}
-  .recipe-banner-70{background:linear-gradient(135deg,#fff9f0,#fffdf0);}
-  .match-pill{position:absolute;top:10px;right:10px;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;}
-  .match-100{background:var(--g500);color:var(--white);}
-  .match-95{background:var(--g400);color:var(--white);}
-  .match-85{background:var(--o400);color:var(--white);}
-  .match-70{background:var(--gray400);color:var(--white);}
-  .recipe-body{padding:16px;}
-  .recipe-title{font-size:15px;font-weight:700;color:var(--gray800);margin-bottom:6px;line-height:1.3;}
-  .recipe-desc{font-size:12.5px;color:var(--gray400);line-height:1.5;margin-bottom:12px;}
-  .recipe-meta{display:flex;gap:12px;font-size:12px;color:var(--gray500);margin-bottom:12px;}
-  .recipe-missing{background:var(--o100);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:12px;}
-  .recipe-missing-title{font-size:11px;font-weight:700;color:var(--o600);margin-bottom:4px;}
-  .recipe-missing-items{font-size:12px;color:var(--o500);}
-  .recipe-actions{display:flex;gap:8px;}
-  .steps-list{display:flex;flex-direction:column;gap:10px;}
-  .step-item{display:flex;gap:12px;align-items:flex-start;}
-  .step-num{width:26px;height:26px;min-width:26px;background:var(--g500);color:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
-  .step-text{font-size:14px;color:var(--gray700);padding-top:3px;line-height:1.5;}
-  .nutrition-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-  .nutrition-item{background:var(--gray50);border-radius:var(--r-sm);padding:10px 12px;text-align:center;}
-  .nutrition-value{font-size:18px;font-weight:800;color:var(--gray800);}
-  .nutrition-label{font-size:11px;color:var(--gray400);margin-top:2px;}
-  .video-card{background:var(--gray50);border-radius:var(--r-md);padding:14px;display:flex;gap:14px;align-items:center;border:1px solid var(--gray200);cursor:pointer;transition:all .15s;}
-  .video-card:hover{background:var(--g50);border-color:var(--g200);}
-  .video-thumb{width:90px;height:58px;background:var(--gray200);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
-  .video-title{font-size:13px;font-weight:600;color:var(--gray800);}
-  .video-meta{font-size:12px;color:var(--gray400);margin-top:4px;}
+html, body { height: 100%; background: var(--ink); color: var(--text-1); font-family: var(--font); }
+#root { height: 100%; }
 
-  /* Shopping */
-  .shopping-toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
-  .shopping-list-items{display:flex;flex-direction:column;gap:8px;}
-  .shopping-item{background:var(--white);border-radius:var(--r-md);padding:14px 18px;display:flex;align-items:center;gap:14px;border:1px solid var(--gray100);box-shadow:var(--shadow-sm);transition:opacity .15s;}
-  .shopping-item.checked{opacity:.45;}
-  .checkbox{width:20px;height:20px;border-radius:6px;border:2px solid var(--gray300);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
-  .checkbox.checked{background:var(--g500);border-color:var(--g500);}
-  .shopping-name{font-size:14px;font-weight:600;color:var(--gray800);}
-  .shopping-qty{font-size:12px;color:var(--gray400);margin-top:2px;}
-  .shopping-category{margin-left:auto;font-size:11px;color:var(--gray400);background:var(--gray100);padding:3px 8px;border-radius:10px;}
-  .shopping-price{font-size:14px;font-weight:700;color:var(--g600);margin-left:10px;}
-  .shopping-total{background:var(--g50);border:1px solid var(--g100);border-radius:var(--r-md);padding:16px 20px;margin-top:20px;display:flex;justify-content:space-between;align-items:center;}
-  .shopping-total-label{font-size:14px;font-weight:600;color:var(--gray600);}
-  .shopping-total-value{font-size:22px;font-weight:800;color:var(--g600);}
+/* ── SHELL ── */
+.shell { display: flex; height: 100vh; overflow: hidden; }
 
-  /* Planner */
-  .planner-tabs{display:flex;gap:6px;margin-bottom:20px;}
-  .planner-tab{padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--gray200);background:var(--white);color:var(--gray500);transition:all .15s;}
-  .planner-tab.active{background:var(--g500);color:var(--white);border-color:var(--g500);}
-  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
-  .day-col{display:flex;flex-direction:column;gap:8px;}
-  .day-label{font-size:12px;font-weight:700;color:var(--gray500);text-align:center;padding:6px 0;}
-  .day-label.today{color:var(--g600);}
-  .meal-slot{background:var(--white);border-radius:var(--r-sm);padding:8px 10px;border:1px solid var(--gray100);min-height:60px;font-size:11.5px;color:var(--gray700);line-height:1.4;}
-  .meal-slot.empty{background:var(--gray50);color:var(--gray300);display:flex;align-items:center;justify-content:center;cursor:pointer;border:1.5px dashed var(--gray200);}
-  .meal-slot.empty:hover{border-color:var(--g300);color:var(--g400);background:var(--g50);}
-  .meal-type-label{font-size:10px;font-weight:700;color:var(--gray400);text-transform:uppercase;margin-bottom:3px;letter-spacing:.4px;}
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px; min-width: 220px;
+  background: var(--ink-2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding-bottom: 20px;
+}
+.sidebar-brand {
+  padding: 28px 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.brand-row { display: flex; align-items: center; gap: 11px; }
+.brand-gem {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--green), var(--amber));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px;
+  box-shadow: 0 0 20px var(--green-glow);
+}
+.brand-name { font-family: var(--display); font-size: 15px; font-weight: 700; color: var(--text-1); line-height: 1.2; }
+.brand-tag  { font-size: 10px; color: var(--text-3); letter-spacing: .5px; margin-top: 1px; }
 
-  /* Waste */
-  .score-hero{text-align:center;padding:32px 24px;}
-  .score-ring-wrap{display:inline-block;position:relative;margin:20px auto;}
-  .score-ring{transform:rotate(-90deg);}
-  .score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-  .score-number{font-size:44px;font-weight:900;color:var(--gray900);line-height:1;}
-  .score-denom{font-size:16px;color:var(--gray400);}
-  .score-label{font-size:14px;color:var(--gray500);margin-top:4px;}
-  .score-message{font-size:15px;font-weight:600;color:var(--g600);margin-top:8px;}
-  .impact-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:24px;}
-  .impact-card{background:var(--white);border-radius:var(--r-md);padding:18px 20px;border:1px solid var(--gray100);box-shadow:var(--shadow-sm);}
-  .impact-emoji{font-size:26px;margin-bottom:8px;}
-  .impact-value{font-size:24px;font-weight:800;color:var(--gray900);}
-  .impact-label{font-size:12px;color:var(--gray400);margin-top:2px;}
-  .card{background:var(--white);border-radius:var(--r-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray100);}
-  .card-pad{padding:20px 24px;}
+.nav { padding: 16px 10px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--r1);
+  font-size: 13.5px; font-weight: 500; color: var(--text-2);
+  cursor: pointer; transition: all .15s;
+  border: none; background: none; width: 100%; text-align: left;
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--ink-3); color: var(--text-1); }
+.nav-item.active {
+  background: var(--green-glow);
+  color: var(--green);
+  font-weight: 600;
+  border: 1px solid rgba(46,204,113,0.2);
+}
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
 
-  /* AI */
-  .ai-fab{position:fixed;bottom:28px;right:28px;z-index:50;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--g500),var(--o400));border:none;cursor:pointer;box-shadow:var(--shadow-lg);font-size:26px;display:flex;align-items:center;justify-content:center;transition:transform .15s;}
-  .ai-fab:hover{transform:scale(1.08);}
-  .ai-panel{position:fixed;bottom:96px;right:28px;z-index:50;width:360px;background:var(--white);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);border:1px solid var(--gray100);display:flex;flex-direction:column;overflow:hidden;max-height:480px;}
-  .ai-panel-header{padding:16px 18px;background:linear-gradient(135deg,var(--g500),var(--o400));color:var(--white);display:flex;align-items:center;justify-content:space-between;}
-  .ai-panel-title{font-size:14px;font-weight:700;}
-  .ai-panel-close{background:none;border:none;color:rgba(255,255,255,.8);cursor:pointer;font-size:18px;}
-  .ai-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
-  .ai-msg{display:flex;gap:8px;}
-  .ai-msg.user{flex-direction:row-reverse;}
-  .ai-avatar{width:30px;height:30px;min-width:30px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:14px;}
-  .ai-bubble{background:var(--gray100);border-radius:14px;border-top-left-radius:4px;padding:10px 14px;font-size:13px;color:var(--gray700);max-width:80%;line-height:1.5;white-space:pre-wrap;}
-  .ai-msg.user .ai-bubble{background:var(--g500);color:var(--white);border-radius:14px;border-top-right-radius:4px;}
-  .ai-input-row{padding:12px 14px;border-top:1px solid var(--gray100);display:flex;gap:8px;}
-  .ai-input{flex:1;border:1px solid var(--gray200);border-radius:var(--r-md);padding:9px 14px;font-size:13px;font-family:var(--font);outline:none;transition:border-color .15s;}
-  .ai-input:focus{border-color:var(--g400);}
-  .ai-send{background:var(--g500);color:var(--white);border:none;border-radius:var(--r-md);padding:0 14px;cursor:pointer;font-size:13px;font-weight:600;}
-  .ai-send:hover{background:var(--g600);}
+.sidebar-foot { padding: 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--ink-3); border-radius: var(--r1); padding: 8px 10px;
+  border: 1px solid var(--border);
+}
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: linear-gradient(135deg,var(--green-dim),var(--amber-dim));
+  display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink:0;
+}
+.user-email { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex:1; }
+.pill-btn {
+  padding: 7px 12px; border-radius: var(--r1);
+  border: 1px solid var(--border); background: transparent;
+  font-size: 11.5px; font-weight: 600; cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; gap: 5px; color: var(--text-2);
+}
+.pill-btn:hover { border-color: var(--border-2); color: var(--text-1); background: var(--ink-3); }
+.pill-btn.danger:hover { border-color: var(--red); color: var(--red); }
 
-  /* Toast */
-  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--gray900);color:var(--white);padding:12px 20px;border-radius:var(--r-md);font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);z-index:200;animation:fadeUp .3s ease;}
-  @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* ── MAIN ── */
+.main { flex: 1; overflow-y: auto; background: var(--ink); }
+.page { padding: 36px 40px; max-width: 1080px; }
 
-  /* Spinner */
-  .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
-  @keyframes spin{to{transform:rotate(360deg)}}
+.page-head { margin-bottom: 32px; }
+.page-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); margin-bottom: 8px; }
+.page-title { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--text-1); line-height: 1.1; }
+.page-sub { font-size: 14px; color: var(--text-3); margin-top: 6px; }
 
-  @media(max-width:900px){.sidebar{display:none;}.page{padding:20px 16px;}.stat-grid{grid-template-columns:repeat(2,1fr);}.week-grid{grid-template-columns:repeat(4,1fr);}.ai-panel{width:calc(100vw - 32px);right:16px;}}
-  @media(max-width:600px){.recipes-grid{grid-template-columns:1fr;}.pantry-grid{grid-template-columns:repeat(2,1fr);}.week-grid{grid-template-columns:repeat(3,1fr);}.impact-grid{grid-template-columns:1fr 1fr;}}
+/* ── STAT CARDS ── */
+.stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 32px; }
+.stat-box {
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 20px;
+  transition: border-color .2s;
+}
+.stat-box:hover { border-color: var(--border-2); }
+.stat-icon { font-size: 22px; margin-bottom: 12px; }
+.stat-lbl { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--text-3); }
+.stat-num { font-size: 32px; font-weight: 700; color: var(--text-1); line-height: 1; margin: 6px 0 4px; }
+.stat-tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; display: inline-block; }
+.tag-red    { background: var(--red-dim); color: var(--red); }
+.tag-green  { background: var(--green-glow); color: var(--green); }
+.tag-amber  { background: rgba(243,156,18,.15); color: var(--amber); }
+
+/* ── SECTION HEADER ── */
+.sec-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.sec-title { font-size: 16px; font-weight: 700; color: var(--text-1); }
+.sec-link { font-size: 12.5px; color: var(--green); font-weight: 600; cursor: pointer; background: none; border: none; }
+.sec-link:hover { text-decoration: underline; }
+
+/* ── EXPIRY LIST ── */
+.expiry-stack { display: flex; flex-direction: column; gap: 8px; }
+.expiry-row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 14px 18px;
+  transition: border-color .15s;
+}
+.expiry-row.urgent { border-left: 3px solid var(--red); }
+.expiry-row.soon   { border-left: 3px solid var(--amber); }
+.expiry-row:hover  { border-color: var(--border-2); }
+.exp-ico { font-size: 26px; }
+.exp-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.exp-days { font-size: 12px; margin-top: 3px; }
+.exp-days.urgent { color: var(--red); font-weight: 600; }
+.exp-days.soon   { color: var(--amber); font-weight: 600; }
+.exp-cta {
+  margin-left: auto; font-size: 12px; font-weight: 600;
+  background: var(--green-glow); color: var(--green);
+  border: 1px solid rgba(46,204,113,0.25); border-radius: 20px;
+  padding: 5px 14px; cursor: pointer; white-space: nowrap; transition: all .15s;
+}
+.exp-cta:hover { background: var(--green); color: var(--ink); }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 10px 18px; border-radius: var(--r1); border: none;
+  font-size: 13.5px; font-weight: 600; cursor: pointer;
+  transition: all .15s; font-family: var(--font);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-green  { background: var(--green); color: var(--ink); }
+.btn-green:hover  { background: #27ae60; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(46,204,113,0.3); }
+.btn-ghost  { background: var(--ink-3); color: var(--text-2); border: 1px solid var(--border); }
+.btn-ghost:hover  { border-color: var(--border-2); color: var(--text-1); }
+.btn-amber  { background: var(--amber); color: var(--ink); }
+.btn-amber:hover  { background: var(--amber-dim); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* ── SEARCH ── */
+.search-bar {
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r1); padding: 10px 16px;
+  font-size: 14px; font-family: var(--font); color: var(--text-1);
+  outline: none; transition: border-color .15s; width: 100%;
+}
+.search-bar::placeholder { color: var(--text-3); }
+.search-bar:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+
+/* ── FILTER CHIPS ── */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+.chip {
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); color: var(--text-3);
+  background: transparent; transition: all .15s;
+}
+.chip:hover { border-color: var(--border-2); color: var(--text-2); }
+.chip.on { background: var(--green-glow); color: var(--green); border-color: rgba(46,204,113,0.3); }
+
+/* ── PANTRY GRID ── */
+.toolbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+.pantry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px,1fr)); gap: 12px; }
+.p-card {
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 16px; position: relative;
+  transition: all .2s; cursor: default;
+}
+.p-card:hover { border-color: var(--border-2); transform: translateY(-2px); box-shadow: var(--s2); }
+.p-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.p-ico {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: var(--ink-3); display: flex; align-items: center;
+  justify-content: center; font-size: 24px;
+}
+.d-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.d-red    { background: var(--red-dim); color: var(--red); }
+.d-amber  { background: rgba(243,156,18,.15); color: var(--amber); }
+.d-green  { background: var(--green-glow); color: var(--green); }
+.p-name { font-size: 14px; font-weight: 700; color: var(--text-1); }
+.p-meta { font-size: 12px; color: var(--text-3); margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; }
+.p-meta span { color: var(--text-2); font-weight: 500; }
+.del-x {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; font-size: 14px; cursor: pointer;
+  color: var(--text-3); opacity: 0; transition: opacity .15s;
+}
+.p-card:hover .del-x { opacity: 1; }
+.del-x:hover { color: var(--red); }
+
+/* ── RECIPE GRID ── */
+.r-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.r-tab {
+  padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); color: var(--text-3);
+  background: transparent; transition: all .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.r-tab:hover { border-color: var(--border-2); color: var(--text-2); }
+.r-tab.on { background: var(--green-glow); color: var(--green); border-color: rgba(46,204,113,.3); }
+.r-cnt { font-size: 11px; background: var(--ink-3); border-radius: 10px; padding: 1px 6px; color: var(--text-3); }
+.r-tab.on .r-cnt { background: rgba(46,204,113,.2); color: var(--green); }
+
+.recipes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(285px,1fr)); gap: 18px; }
+.r-card {
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r3); overflow: hidden; cursor: pointer;
+  transition: all .2s;
+}
+.r-card:hover { transform: translateY(-4px); box-shadow: var(--s3); border-color: var(--border-2); }
+
+/* Photo banner with real food images */
+.r-photo {
+  height: 160px; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end;
+  background-size: cover; background-position: center;
+}
+.r-photo-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(10,26,16,0) 30%, rgba(10,26,16,0.9) 100%);
+}
+.r-photo-emoji {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 58px;
+  background: linear-gradient(135deg, var(--ink-3), var(--ink-4));
+}
+.r-match-pill {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  font-size: 11px; font-weight: 800; padding: 4px 11px; border-radius: 20px;
+  backdrop-filter: blur(8px);
+}
+.rm-100 { background: rgba(46,204,113,.9); color: #fff; }
+.rm-95  { background: rgba(46,180,100,.85); color: #fff; }
+.rm-85  { background: rgba(243,156,18,.9);  color: var(--ink); }
+.rm-70  { background: rgba(255,255,255,.2);  color: #fff; border: 1px solid rgba(255,255,255,.3); }
+
+.r-body { padding: 16px; }
+.r-title { font-size: 15px; font-weight: 700; color: var(--text-1); line-height: 1.3; margin-bottom: 5px; }
+.r-desc  { font-size: 12.5px; color: var(--text-3); line-height: 1.5; margin-bottom: 12px; }
+.r-meta  { display: flex; gap: 12px; font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+.r-missing {
+  background: rgba(243,156,18,.1); border: 1px solid rgba(243,156,18,.2);
+  border-radius: var(--r1); padding: 8px 12px; margin-bottom: 12px;
+}
+.r-miss-t { font-size: 11px; font-weight: 700; color: var(--amber); margin-bottom: 3px; }
+.r-miss-i { font-size: 12px; color: rgba(243,156,18,.7); }
+.r-acts { display: flex; gap: 8px; }
+
+/* ── MODAL ── */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal {
+  background: var(--ink-2); border: 1px solid var(--border-2);
+  border-radius: var(--r4); max-width: 580px; width: 100%;
+  max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 40px 80px rgba(0,0,0,.7);
+}
+.modal::-webkit-scrollbar { width: 4px; }
+.modal::-webkit-scrollbar-track { background: transparent; }
+.modal::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 4px; }
+.m-banner { height: 180px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 64px; background: var(--ink-3); border-radius: var(--r4) var(--r4) 0 0; }
+.m-head { padding: 22px 24px 16px; border-bottom: 1px solid var(--border); }
+.m-title { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--text-1); }
+.m-sub { font-size: 13px; color: var(--text-3); margin-top: 4px; }
+.m-close { position: absolute; top: 16px; right: 16px; background: rgba(0,0,0,.4); border: none; color: var(--text-2); cursor: pointer; font-size: 18px; border-radius: 50%; width: 32px; height: 32px; display:flex;align-items:center;justify-content:center; }
+.m-body { padding: 22px 24px; }
+.m-sec { margin-bottom: 22px; }
+.m-sec-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-3); margin-bottom: 12px; }
+.steps { display: flex; flex-direction: column; gap: 12px; }
+.step { display: flex; gap: 12px; }
+.step-n { width: 28px; height: 28px; min-width:28px; background: var(--green); color: var(--ink); border-radius: 50%; display:flex;align-items:center;justify-content:center; font-size: 12px; font-weight: 700; }
+.step-t { font-size: 14px; color: var(--text-2); padding-top: 4px; line-height: 1.6; }
+.nutri { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+.n-box { background: var(--ink-3); border-radius: var(--r1); padding: 12px; text-align: center; }
+.n-val { font-size: 20px; font-weight: 800; color: var(--text-1); }
+.n-lbl { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+.vid-card {
+  background: var(--ink-3); border: 1px solid var(--border); border-radius: var(--r2);
+  padding: 14px; display: flex; gap: 14px; align-items: center; cursor: pointer; transition: all .15s;
+}
+.vid-card:hover { border-color: rgba(46,204,113,.3); background: var(--ink-4); }
+.vid-thumb { width: 88px; height: 56px; background: var(--ink); border-radius: var(--r1); display:flex;align-items:center;justify-content:center; font-size: 22px; flex-shrink:0; }
+.vid-t { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.vid-m { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+.m-foot { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ── FORM ── */
+.f-group { margin-bottom: 16px; }
+.f-label { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 7px; display: block; }
+.f-input {
+  width: 100%; background: var(--ink-3); border: 1px solid var(--border);
+  border-radius: var(--r1); padding: 11px 14px; font-size: 14px;
+  font-family: var(--font); color: var(--text-1); outline: none; transition: border-color .15s;
+}
+.f-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+.f-input::placeholder { color: var(--text-3); }
+.f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.e-btn {
+  font-size: 22px; background: var(--ink-3); border: 2px solid transparent;
+  border-radius: 8px; padding: 4px 8px; cursor: pointer; transition: all .15s;
+}
+.e-btn:hover { background: var(--ink-4); }
+.e-btn.sel { border-color: var(--green); background: var(--green-glow); }
+
+/* ── SHOPPING ── */
+.s-items { display: flex; flex-direction: column; gap: 8px; }
+.s-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 14px 16px; transition: all .15s;
+}
+.s-row:hover { border-color: var(--border-2); }
+.s-row.done { opacity: .4; }
+.chk {
+  width: 20px; height: 20px; border-radius: 6px;
+  border: 2px solid var(--text-3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink:0;
+  transition: all .15s;
+}
+.chk.on { background: var(--green); border-color: var(--green); }
+.s-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.s-qty  { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.s-cat  { margin-left: auto; font-size: 11px; color: var(--text-3); background: var(--ink-3); padding: 3px 8px; border-radius: 10px; }
+.s-price { font-size: 14px; font-weight: 700; color: var(--green); margin-left: 10px; }
+.s-total {
+  margin-top: 20px; background: var(--green-glow); border: 1px solid rgba(46,204,113,.25);
+  border-radius: var(--r2); padding: 16px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.s-total-l { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.s-total-v { font-size: 24px; font-weight: 800; color: var(--green); }
+
+/* ── PLANNER ── */
+.week-g { display: grid; grid-template-columns: repeat(7,1fr); gap: 8px; }
+.day-col { display: flex; flex-direction: column; gap: 6px; }
+.day-hd { font-size: 11px; font-weight: 700; color: var(--text-3); text-align: center; padding: 6px 0; text-transform: uppercase; letter-spacing: .5px; }
+.day-hd.today { color: var(--green); }
+.meal-t { font-size: 9px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.meal-slot {
+  background: var(--ink-2); border: 1px solid var(--border);
+  border-radius: var(--r1); padding: 8px; min-height: 58px;
+  font-size: 11px; color: var(--text-2); line-height: 1.4;
+}
+.meal-slot.empty {
+  border-style: dashed; color: var(--text-3); display: flex;
+  align-items: center; justify-content: center; cursor: pointer; font-size: 20px;
+}
+.meal-slot.empty:hover { border-color: var(--green); color: var(--green); background: var(--green-glow); }
+
+/* ── WASTE SCORE ── */
+.score-hero { text-align: center; padding: 36px 24px 24px; }
+.ring-wrap { display: inline-block; position: relative; margin: 16px auto; }
+.ring { transform: rotate(-90deg); }
+.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ring-num { font-size: 46px; font-weight: 900; line-height: 1; }
+.ring-den { font-size: 16px; color: var(--text-3); }
+.score-msg { font-size: 15px; font-weight: 600; color: var(--green); margin-top: 10px; }
+.impact-g { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-top: 24px; }
+.imp-card { background: var(--ink-2); border: 1px solid var(--border); border-radius: var(--r2); padding: 18px; }
+.imp-ico { font-size: 26px; margin-bottom: 8px; }
+.imp-val { font-size: 24px; font-weight: 800; color: var(--text-1); }
+.imp-lbl { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+.bar-hist { background: var(--ink-2); border: 1px solid var(--border); border-radius: var(--r2); padding: 20px; margin-top: 20px; }
+.bar-hist-t { font-size: 14px; font-weight: 700; color: var(--text-1); margin-bottom: 16px; }
+.bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.bar-lbl { width: 28px; font-size: 12px; color: var(--text-3); font-weight: 600; }
+.bar-track { flex: 1; background: var(--ink-3); border-radius: 6px; height: 10px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 6px; transition: width 1.2s ease; }
+.bar-val { width: 28px; font-size: 12px; font-weight: 700; color: var(--text-2); }
+
+/* ── AI FAB ── */
+.ai-fab {
+  position: fixed; bottom: 28px; right: 28px; z-index: 50;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--amber));
+  border: none; cursor: pointer; box-shadow: 0 8px 24px rgba(46,204,113,0.35);
+  font-size: 26px; display: flex; align-items: center; justify-content: center;
+  transition: transform .15s;
+}
+.ai-fab:hover { transform: scale(1.1); }
+.ai-panel {
+  position: fixed; bottom: 98px; right: 28px; z-index: 50;
+  width: 360px; max-height: 480px; display: flex; flex-direction: column;
+  background: var(--ink-2); border: 1px solid var(--border-2);
+  border-radius: var(--r4); box-shadow: var(--s3); overflow: hidden;
+}
+.ai-ph {
+  padding: 16px 18px;
+  background: linear-gradient(135deg, var(--green-dim), var(--amber-dim));
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ai-ph-t { font-size: 14px; font-weight: 700; color: #fff; }
+.ai-ph-x { background: none; border: none; color: rgba(255,255,255,.7); cursor: pointer; font-size: 18px; }
+.ai-msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.ai-msgs::-webkit-scrollbar { width: 3px; }
+.ai-msgs::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius:3px; }
+.ai-m { display: flex; gap: 8px; }
+.ai-m.u { flex-direction: row-reverse; }
+.ai-av { width: 30px; height: 30px; min-width:30px; border-radius: 50%; background: var(--ink-3); display:flex;align-items:center;justify-content:center; font-size: 14px; }
+.ai-b { background: var(--ink-3); border-radius: 14px; border-top-left-radius: 4px; padding: 10px 14px; font-size: 13px; color: var(--text-2); max-width: 82%; line-height: 1.55; white-space: pre-wrap; }
+.ai-m.u .ai-b { background: var(--green-dim); color: #fff; border-radius: 14px; border-top-right-radius: 4px; }
+.ai-in-row { padding: 12px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.ai-in { flex: 1; background: var(--ink-3); border: 1px solid var(--border); border-radius: var(--r1); padding: 9px 14px; font-size: 13px; font-family: var(--font); color: var(--text-1); outline: none; }
+.ai-in:focus { border-color: var(--green); }
+.ai-in::placeholder { color: var(--text-3); }
+.ai-send { background: var(--green); color: var(--ink); border: none; border-radius: var(--r1); padding: 0 14px; cursor: pointer; font-size: 13px; font-weight: 700; }
+.ai-send:hover { background: #27ae60; }
+
+/* ── AUTH ── */
+.auth-wrap { min-height: 100vh; background: var(--ink); display: flex; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; }
+.auth-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 20% 50%, rgba(46,204,113,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(243,156,18,0.06) 0%, transparent 50%);
+}
+.auth-card { background: var(--ink-2); border: 1px solid var(--border); border-radius: var(--r4); padding: 40px; max-width: 420px; width: 100%; box-shadow: var(--s3); position: relative; z-index:1; }
+.auth-logo { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 28px; }
+.auth-gem { width: 48px; height: 48px; background: linear-gradient(135deg,var(--green),var(--amber)); border-radius: 14px; display:flex;align-items:center;justify-content:center;font-size:26px; box-shadow: 0 0 30px var(--green-glow); }
+.auth-brand { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--text-1); }
+.auth-title { font-family: var(--display); font-size: 24px; font-weight: 700; color: var(--text-1); text-align: center; margin-bottom: 6px; }
+.auth-sub { font-size: 14px; color: var(--text-3); text-align: center; margin-bottom: 28px; }
+.auth-google { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--r2); background: var(--ink-3); cursor: pointer; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all .15s; color: var(--text-1); }
+.auth-google:hover { border-color: var(--green); background: var(--green-glow); }
+.divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+.div-line { flex: 1; height: 1px; background: var(--border); }
+.div-txt { font-size: 12px; color: var(--text-3); }
+.auth-err { background: var(--red-dim); color: var(--red); padding: 10px 14px; border-radius: var(--r1); font-size: 13px; margin-bottom: 16px; }
+.auth-btn { width: 100%; padding: 13px; background: var(--green); color: var(--ink); border: none; border-radius: var(--r2); font-size: 15px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all .15s; }
+.auth-btn:hover { background: #27ae60; box-shadow: 0 6px 24px rgba(46,204,113,.3); }
+.auth-btn:disabled { opacity:.5; cursor:not-allowed; }
+.auth-tog { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-3); }
+.auth-tog button { color: var(--green); font-weight: 700; background: none; border: none; cursor: pointer; }
+
+/* ── EMPTY STATE ── */
+.empty-st { text-align: center; padding: 64px 24px; color: var(--text-3); }
+.empty-ico { font-size: 52px; margin-bottom: 16px; opacity: .6; }
+.empty-txt { font-size: 15px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+  background: var(--ink-2); border: 1px solid var(--border-2); color: var(--text-1);
+  padding: 12px 20px; border-radius: var(--r2); font-size: 14px; font-weight: 500;
+  box-shadow: var(--s3); z-index: 200; animation: fup .3s ease;
+}
+@keyframes fup { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+/* ── SPINNER ── */
+.spin { width:18px;height:18px;border:2px solid rgba(10,26,16,.3);border-top-color:var(--ink);border-radius:50%;animation:sp .7s linear infinite;display:inline-block; }
+@keyframes sp { to{transform:rotate(360deg)} }
+
+/* ── LOADING SCREEN ── */
+.loading-screen { min-height:100vh;background:var(--ink);display:flex;align-items:center;justify-content:center; }
+.loading-inner { text-align:center; }
+.loading-gem { width:64px;height:64px;background:linear-gradient(135deg,var(--green),var(--amber));border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 20px;box-shadow:0 0 40px var(--green-glow);animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 20px var(--green-glow)} 50%{box-shadow:0 0 50px rgba(46,204,113,.4)} }
+.loading-txt { font-size:14px;color:var(--text-3); }
+
+@media(max-width:900px) { .sidebar{display:none;} .page{padding:20px 16px;} .stat-row{grid-template-columns:repeat(2,1fr);} .week-g{grid-template-columns:repeat(4,1fr);} .ai-panel{width:calc(100vw - 32px);right:16px;} }
+@media(max-width:600px) { .recipes-grid{grid-template-columns:1fr;} .pantry-grid{grid-template-columns:repeat(2,1fr);} .week-g{grid-template-columns:repeat(3,1fr);} .impact-g{grid-template-columns:1fr 1fr;} .stat-row{grid-template-columns:1fr 1fr;} }
 `;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── STRINGS ──────────────────────────────────────────────────────────────────
+const T = {
+  pt: {
+    nav: { dashboard:"Início", pantry:"Minha Despensa", recipes:"Receitas", shopping:"Compras", planner:"Cardápio", waste:"Impacto" },
+    auth: { welcome:"Bem-vindo de volta", sub:"Entre para acessar sua despensa", email:"E-mail", password:"Senha", signin:"Entrar", signup:"Criar conta", tog_in:"Já tenho conta", tog_up:"Criar conta agora", or:"ou", google:"Continuar com Google", err:"Algo deu errado. Tente novamente." },
+    dash: { hi:"Bom dia! 👋", sub:"Veja o que está acontecendo na sua cozinha.", exp:"Vencendo em breve", rdy:"Receitas prontas", items:"Itens na despensa", score:"Score de impacto", urgent:"Urgente", cook:"Cozinhe antes que vença", all:"Ver tudo", tmw:"Vence amanhã", in:"Vence em", days:"dias" },
+    pantry: { title:"Minha Despensa", sub:"Tudo que você tem em casa", add:"Adicionar", search:"Buscar ingredientes…", cats:["Todos","Geladeira","Freezer","Despensa","Temperos"], qty:"Qtd", loc:"Local", modal_t:"Novo ingrediente", name:"Nome", quantity:"Quantidade", unit:"Unidade", cat:"Categoria", exp:"Data de validade", save:"Salvar", cancel:"Cancelar", receipt:"📷 Escanear nota", voice:"🎙️ Voz", empty:"Sua despensa está vazia. Adicione o primeiro ingrediente!" },
+    recipes: { title:"Receitas para você", sub:"Com base no que você já tem", all:"Todas", cook_now:"Pode cozinhar", almost:"Quase pronto", need:"Precisa comprar", match:"compatível", missing:"Faltando", min:"min", serv:"porções", diff:["Fácil","Médio","Difícil"], cook:"Cozinhar agora", save:"Salvar", miss_lbl:"⚠️ Faltando", watch:"▶ Ver vídeo", nutr:"Nutrição", prep:"Modo de preparo", vid:"Vídeo da receita", close:"Fechar", add_shop:"🛒 Adicionar à lista" },
+    shopping: { title:"Lista de compras", sub:"O que você precisa comprar", add:"Adicionar", clear:"Limpar marcados", total:"Total estimado", items:"itens", empty:"Sua lista está vazia.", add_ph:"Adicionar item…" },
+    planner: { title:"Cardápio semanal", sub:"Planeje suas refeições com antecedência", days:["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"], meals:{breakfast:"☀️ Café",lunch:"🌤 Almoço",dinner:"🌙 Jantar",snack:"🍎 Lanche"} },
+    waste: { title:"Score de impacto", sub:"Acompanhe seu impacto ambiental e financeiro", score_lbl:"Seu score", month:"Este mês", saved:"Economizado", rescued:"Itens resgatados", cooked:"Receitas feitas", reduced:"Desperdício evitado", great:"Excelente! Continue assim 🌱", good:"Bom trabalho! Melhorias à frente 👍", avg:"Dá para melhorar 💪", hist:"Histórico mensal" },
+    ai: { title:"Chef IA", ph:"Me diga o que tem e sugiro receitas…", send:"Enviar", think:"Pensando…", hi:"Olá! Sou seu Chef IA. Me diga o que você tem em casa e vou sugerir as melhores receitas!" },
+    out:"Sair", lang:"EN",
+  },
+  en: {
+    nav: { dashboard:"Dashboard", pantry:"My Pantry", recipes:"Recipes", shopping:"Shopping", planner:"Meal Plan", waste:"Impact" },
+    auth: { welcome:"Welcome back", sub:"Sign in to access your pantry", email:"Email", password:"Password", signin:"Sign In", signup:"Create Account", tog_in:"Already have an account", tog_up:"Create account now", or:"or", google:"Continue with Google", err:"Something went wrong. Try again." },
+    dash: { hi:"Good morning! 👋", sub:"Here's what's happening in your kitchen.", exp:"Expiring soon", rdy:"Recipes ready", items:"Pantry items", score:"Waste score", urgent:"Urgent", cook:"Cook before they expire", all:"View all", tmw:"Expires tomorrow", in:"Expires in", days:"days" },
+    pantry: { title:"My Pantry", sub:"Everything you have at home", add:"Add Item", search:"Search ingredients…", cats:["All","Fridge","Freezer","Pantry","Spices"], qty:"Qty", loc:"Location", modal_t:"New ingredient", name:"Name", quantity:"Quantity", unit:"Unit", cat:"Category", exp:"Expiration date", save:"Save", cancel:"Cancel", receipt:"📷 Scan receipt", voice:"🎙️ Voice", empty:"Your pantry is empty. Add your first ingredient!" },
+    recipes: { title:"Recipes for you", sub:"Based on what you already have", all:"All", cook_now:"Can cook", almost:"Almost ready", need:"Need shopping", match:"match", missing:"Missing", min:"min", serv:"servings", diff:["Easy","Medium","Hard"], cook:"Cook now", save:"Save", miss_lbl:"⚠️ Missing", watch:"▶ Watch video", nutr:"Nutrition", prep:"Instructions", vid:"Recipe video", close:"Close", add_shop:"🛒 Add to list" },
+    shopping: { title:"Shopping List", sub:"What you need to buy", add:"Add Item", clear:"Clear checked", total:"Estimated total", items:"items", empty:"Your list is empty.", add_ph:"Add item…" },
+    planner: { title:"Meal Planner", sub:"Plan your meals ahead", days:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], meals:{breakfast:"☀️ Breakfast",lunch:"🌤 Lunch",dinner:"🌙 Dinner",snack:"🍎 Snack"} },
+    waste: { title:"Impact Score", sub:"Track your environmental & financial impact", score_lbl:"Your score", month:"This month", saved:"Money saved", rescued:"Items rescued", cooked:"Recipes cooked", reduced:"Waste reduced", great:"Excellent! Keep it up 🌱", good:"Good job! Small wins ahead 👍", avg:"Room to improve 💪", hist:"Monthly history" },
+    ai: { title:"AI Chef", ph:"Tell me what you have…", send:"Send", think:"Thinking…", hi:"Hi! I'm your AI Chef. Tell me what you have at home and I'll suggest the best recipes!" },
+    out:"Sign Out", lang:"PT",
+  }
+};
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const RECIPES_DATA = [
+  { id:1, title:"Omelete de Queijo / Cheese Omelette", cuisine:"Brasileira", time:15, serv:2, diff:0, match:100, missing:[], cal:320, prot:24, cat:"Café", emoji:"🍳", desc:"Omelete fofinha com mussarela derretida e ervas frescas.", steps:["Bata 3 ovos com uma pitada de sal.","Aqueça azeite em frigideira antiaderente.","Despeje os ovos e cozinhe até as bordas firmarem.","Adicione mussarela, dobre e sirva."], chan:"Chef João", dur:"8:32", views:"2.4M", img:"https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&q=80" },
+  { id:2, title:"Risoto de Cogumelos / Mushroom Risotto", cuisine:"Italiana", time:35, serv:4, diff:1, match:85, missing:["Arroz arbóreo","Vinho branco"], cal:480, prot:12, cat:"Jantar", emoji:"🍲", desc:"Risoto cremoso com cogumelos salteados e parmesão.", steps:["Refogue cebola e alho no azeite.","Adicione cogumelos e doure.","Adicione o arroz e o caldo aos poucos.","Finalize com manteiga e parmesão."], chan:"Cucina Italia", dur:"12:15", views:"890K", img:"https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=600&q=80" },
+  { id:3, title:"Frango ao Alho / Garlic Chicken", cuisine:"Brasileira", time:45, serv:4, diff:1, match:95, missing:["Limão"], cal:520, prot:48, cat:"Jantar", emoji:"🍗", desc:"Frango suculento com crosta de alho dourado.", steps:["Tempere o frango com sal, pimenta e alho.","Marine por 30 minutos.","Sele em azeite quente 4 min de cada lado.","Finalize no forno a 180°C por 15 min."], chan:"Sabores do Brasil", dur:"18:40", views:"3.1M", img:"https://images.unsplash.com/photo-1598103442097-8b74394b95c8?w=600&q=80" },
+  { id:4, title:"Arroz com Feijão / Rice & Beans", cuisine:"Brasileira", time:40, serv:6, diff:0, match:100, missing:[], cal:380, prot:14, cat:"Almoço", emoji:"🍚", desc:"O clássico brasileiro perfeitamente temperado.", steps:["Cozinhe feijão na pressão por 20 min.","Refogue alho e cebola no óleo.","Adicione o feijão e tempere a gosto.","Cozinhe o arroz separado e sirva junto."], chan:"Receitas Brasileiras", dur:"22:10", views:"5.7M", img:"https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&q=80" },
+  { id:5, title:"Salada Caprese / Caprese Salad", cuisine:"Italiana", time:10, serv:2, diff:0, match:100, missing:[], cal:220, prot:14, cat:"Almoço", emoji:"🥗", desc:"Tomate fresco e mussarela com fio de azeite.", steps:["Fatie tomates e mussarela uniformemente.","Disponha alternados em camadas no prato.","Regue com azeite extra-virgem.","Tempere com sal e folhas de manjericão fresco."], chan:"Italian Kitchen", dur:"6:20", views:"1.2M", img:"https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=600&q=80" },
+  { id:6, title:"Macarrão ao Sugo / Tomato Pasta", cuisine:"Italiana", time:25, serv:4, diff:0, match:70, missing:["Macarrão","Manjericão"], cal:420, prot:16, cat:"Jantar", emoji:"🍝", desc:"Molho de tomate clássico com alho e ervas.", steps:["Cozinhe o macarrão em água com sal.","Refogue alho e cebola no azeite.","Adicione tomates amassados e cozinhe 15 min.","Misture o macarrão no molho e sirva."], chan:"Pasta Masters", dur:"14:55", views:"4.3M", img:"https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80" },
+];
+
+const PANTRY_MOCK = [
+  { id:"m1", name:"Ovos / Eggs", qty:12, unit:"un", location:"Fridge", category:"Fridge", days_left:10, emoji:"🥚" },
+  { id:"m2", name:"Leite / Milk", qty:1, unit:"L", location:"Fridge", category:"Fridge", days_left:2, emoji:"🥛" },
+  { id:"m3", name:"Mussarela / Mozzarella", qty:500, unit:"g", location:"Fridge", category:"Fridge", days_left:5, emoji:"🧀" },
+  { id:"m4", name:"Tomate / Tomato", qty:3, unit:"un", location:"Fridge", category:"Fridge", days_left:3, emoji:"🍅" },
+  { id:"m5", name:"Cebola / Onion", qty:2, unit:"un", location:"Pantry", category:"Pantry", days_left:21, emoji:"🧅" },
+  { id:"m6", name:"Alho / Garlic", qty:1, unit:"cabeça", location:"Pantry", category:"Pantry", days_left:30, emoji:"🧄" },
+  { id:"m7", name:"Frango / Chicken", qty:600, unit:"g", location:"Freezer", category:"Freezer", days_left:60, emoji:"🍗" },
+  { id:"m8", name:"Arroz / Rice", qty:2, unit:"kg", location:"Pantry", category:"Pantry", days_left:180, emoji:"🍚" },
+  { id:"m9", name:"Feijão / Beans", qty:1, unit:"kg", location:"Pantry", category:"Pantry", days_left:180, emoji:"🫘" },
+  { id:"m10", name:"Espinafre / Spinach", qty:200, unit:"g", location:"Fridge", category:"Fridge", days_left:1, emoji:"🥬" },
+  { id:"m11", name:"Cogumelos / Mushrooms", qty:250, unit:"g", location:"Fridge", category:"Fridge", days_left:2, emoji:"🍄" },
+  { id:"m12", name:"Azeite / Olive Oil", qty:500, unit:"ml", location:"Pantry", category:"Pantry", days_left:365, emoji:"🫙" },
+];
+
+const SHOP_MOCK = [
+  { id:"s1", name:"Arroz arbóreo", qty:"500g", category:"Grãos", checked:false, price:8.90 },
+  { id:"s2", name:"Vinho branco", qty:"1 garrafa", category:"Bebidas", checked:false, price:22.00 },
+  { id:"s3", name:"Limão", qty:"3 un", category:"Frutas", checked:true, price:3.50 },
+  { id:"s4", name:"Macarrão", qty:"500g", category:"Grãos", checked:false, price:5.90 },
+  { id:"s5", name:"Manjericão", qty:"1 maço", category:"Ervas", checked:false, price:4.00 },
+];
+
+const MEAL_PLAN = {
+  Mon:{ breakfast:"Omelete 🍳", lunch:"Arroz e Feijão 🍚", dinner:null, snack:null },
+  Tue:{ breakfast:null, lunch:"Caprese 🥗", dinner:"Frango ao Alho 🍗", snack:null },
+  Wed:{ breakfast:null, lunch:null, dinner:"Risoto 🍲", snack:null },
+  Thu:{ breakfast:"Omelete 🍳", lunch:"Arroz e Feijão 🍚", dinner:null, snack:null },
+  Fri:{ breakfast:null, lunch:null, dinner:"Macarrão 🍝", snack:null },
+  Sat:{ breakfast:null, lunch:"Caprese 🥗", dinner:"Frango ao Alho 🍗", snack:null },
+  Sun:{ breakfast:null, lunch:"Arroz e Feijão 🍚", dinner:null, snack:null },
+};
+const DAY_KEYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 function useToast() {
-  const [toast, setToast] = useState(null);
-  const show = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
-  return [toast, show];
+  const [msg, setMsg] = useState(null);
+  const show = m => { setMsg(m); setTimeout(() => setMsg(null), 2600); };
+  return [msg, show];
 }
+function dbg(d) { return d <= 1 ? "d-red" : d <= 3 ? "d-amber" : "d-green"; }
+function exc(d) { return d <= 1 ? "urgent" : "soon"; }
+function matchPill(m) { return m === 100 ? "rm-100" : m >= 95 ? "rm-95" : m >= 85 ? "rm-85" : "rm-70"; }
 
-function daysBadgeClass(d) { return d <= 1 ? "days-urgent" : d <= 3 ? "days-soon" : "days-ok"; }
-function expiryClass(d) { return d <= 1 ? "urgent" : "soon"; }
-
-// ── Score Ring ────────────────────────────────────────────────────────────────
-function ScoreRing({ score }) {
-  const r = 70, circ = 2 * Math.PI * r;
-  const color = score >= 80 ? "#38a169" : score >= 60 ? "#ed8936" : "#f56565";
+// ── SCORE RING ────────────────────────────────────────────────────────────────
+function Ring({ score }) {
+  const r = 72, circ = 2 * Math.PI * r;
+  const color = score >= 80 ? "#2ECC71" : score >= 60 ? "#F39C12" : "#E74C3C";
   return (
-    <div className="score-ring-wrap">
-      <svg width="160" height="160" className="score-ring">
-        <circle cx="80" cy="80" r={r} fill="none" stroke="#f1f5f9" strokeWidth="12" />
-        <circle cx="80" cy="80" r={r} fill="none" stroke={color} strokeWidth="12"
-          strokeDasharray={circ} strokeDashoffset={circ * (1 - score / 100)}
-          strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s ease" }} />
+    <div className="ring-wrap">
+      <svg width="168" height="168" className="ring">
+        <circle cx="84" cy="84" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="14"/>
+        <circle cx="84" cy="84" r={r} fill="none" stroke={color} strokeWidth="14"
+          strokeDasharray={circ} strokeDashoffset={circ*(1-score/100)}
+          strokeLinecap="round" style={{transition:"stroke-dashoffset 1.2s ease"}}/>
       </svg>
-      <div className="score-center">
-        <div className="score-number" style={{ color }}>{score}</div>
-        <div className="score-denom">/100</div>
+      <div className="ring-center">
+        <div className="ring-num" style={{color}}>{score}</div>
+        <div className="ring-den">/100</div>
       </div>
     </div>
   );
 }
 
-// ── Auth Screen ───────────────────────────────────────────────────────────────
-function AuthScreen({ lang, setLang }) {
-  const t = T[lang].auth;
-  const [mode, setMode] = useState("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  async function handleGoogle() {
-    setLoading(true); setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
-    if (error) { setError(t.error); setLoading(false); }
-  }
-
-  async function handleEmail() {
-    if (!email || !password) return;
-    setLoading(true); setError(null);
-    const fn = mode === "signin" ? supabase.auth.signInWithPassword : supabase.auth.signUp;
-    const { error } = await fn.call(supabase.auth, { email, password });
-    if (error) { setError(error.message); }
-    setLoading(false);
-  }
-
-  return (
-    <div className="auth-wrap">
-      <div className="auth-card">
-        <div className="auth-logo">
-          <div className="auth-logo-icon">🥗</div>
-          <div className="auth-logo-name">Smart Pantry Chef</div>
-        </div>
-        <div className="auth-title">{t.welcome}</div>
-        <div className="auth-sub">{t.subtitle}</div>
-
-        {error && <div className="auth-error">⚠️ {error}</div>}
-
-        <button className="auth-google" onClick={handleGoogle} disabled={loading}>
-          <span>🇬</span> {t.google}
-        </button>
-
-        <div className="auth-divider">
-          <div className="auth-divider-line" />
-          <div className="auth-divider-text">{t.or}</div>
-          <div className="auth-divider-line" />
-        </div>
-
-        <div className="auth-field">
-          <label className="auth-label">{t.email}</label>
-          <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" />
-        </div>
-        <div className="auth-field">
-          <label className="auth-label">{t.password}</label>
-          <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key === "Enter" && handleEmail()} />
-        </div>
-
-        <button className="auth-btn" onClick={handleEmail} disabled={loading}>
-          {loading ? <span className="spinner" /> : (mode === "signin" ? t.signin : t.signup)}
-        </button>
-
-        <div className="auth-toggle">
-          <button onClick={() => setMode(m => m === "signin" ? "signup" : "signin")}>
-            {mode === "signin" ? t.toggle_signup : t.toggle_signin}
-          </button>
-        </div>
-
-        <div style={{ textAlign: "center", marginTop: 16 }}>
-          <button className="lang-btn" style={{ display: "inline-flex", margin: "0 auto" }} onClick={() => setLang(l => l === "pt" ? "en" : "pt")}>
-            🌐 {lang === "pt" ? "Switch to English" : "Mudar para PT"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── AI Chat ───────────────────────────────────────────────────────────────────
+// ── AI CHAT ───────────────────────────────────────────────────────────────────
 function AIChat({ lang, pantryItems }) {
   const t = T[lang].ai;
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([{ role: "assistant", text: t.greeting }]);
-  const [input, setInput] = useState("");
+  const [msgs, setMsgs] = useState([{ role:"assistant", text:t.hi }]);
+  const [inp, setInp] = useState("");
   const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  const pantryContext = pantryItems.length > 0
-    ? pantryItems.map(i => `${i.name} (${i.qty} ${i.unit})`).join(", ")
-    : (lang === "pt" ? "despensa vazia" : "empty pantry");
+  const ctx = pantryItems.length ? pantryItems.map(i => `${i.name} (${i.qty} ${i.unit})`).join(", ") : (lang === "pt" ? "despensa vazia" : "empty pantry");
 
   async function send() {
-    const text = input.trim();
-    if (!text || loading) return;
-    const newMsgs = [...messages, { role: "user", text }];
-    setMessages(newMsgs);
-    setInput("");
-    setLoading(true);
+    const text = inp.trim(); if (!text || loading) return;
+    const next = [...msgs, { role:"user", text }];
+    setMsgs(next); setInp(""); setLoading(true);
     try {
-      const system = lang === "pt"
-        ? `Você é Chef IA do Smart Pantry Chef. O usuário tem: ${pantryContext}. Sugira receitas práticas com esses ingredientes. Seja animado e use emojis de comida. Máximo 3 receitas por resposta.`
-        : `You are AI Chef of Smart Pantry Chef. The user has: ${pantryContext}. Suggest practical recipes using these. Be enthusiastic and use food emojis. Max 3 recipes per answer.`;
+      const sys = lang === "pt"
+        ? `Você é Chef IA do Smart Pantry Chef. O usuário tem: ${ctx}. Sugira receitas práticas. Use emojis de comida. Máximo 3 receitas.`
+        : `You are AI Chef. User has: ${ctx}. Suggest practical recipes. Use food emojis. Max 3 recipes.`;
       const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system, messages: newMsgs.map(m => ({ role: m.role, content: m.text })) }),
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:1000, system:sys, messages:next.map(m => ({ role:m.role, content:m.text })) })
       });
-      const data = await res.json();
-      const reply = data.content?.find(b => b.type === "text")?.text || "...";
-      setMessages(prev => [...prev, { role: "assistant", text: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", text: lang === "pt" ? "Erro de conexão. Tente novamente." : "Connection error. Please try again." }]);
-    }
+      const d = await res.json();
+      const reply = d.content?.find(b => b.type==="text")?.text || "...";
+      setMsgs(p => [...p, { role:"assistant", text:reply }]);
+    } catch { setMsgs(p => [...p, { role:"assistant", text:lang==="pt"?"Erro de conexão.":"Connection error." }]); }
     setLoading(false);
   }
 
@@ -472,23 +648,23 @@ function AIChat({ lang, pantryItems }) {
       <button className="ai-fab" onClick={() => setOpen(o => !o)}>👨‍🍳</button>
       {open && (
         <div className="ai-panel">
-          <div className="ai-panel-header">
-            <span className="ai-panel-title">👨‍🍳 {t.title}</span>
-            <button className="ai-panel-close" onClick={() => setOpen(false)}>✕</button>
+          <div className="ai-ph">
+            <span className="ai-ph-t">👨‍🍳 {t.title}</span>
+            <button className="ai-ph-x" onClick={() => setOpen(false)}>✕</button>
           </div>
-          <div className="ai-messages">
-            {messages.map((m, i) => (
-              <div key={i} className={`ai-msg ${m.role === "user" ? "user" : ""}`}>
-                {m.role === "assistant" && <div className="ai-avatar">👨‍🍳</div>}
-                <div className="ai-bubble">{m.text}</div>
-                {m.role === "user" && <div className="ai-avatar">🙋</div>}
+          <div className="ai-msgs">
+            {msgs.map((m,i) => (
+              <div key={i} className={`ai-m ${m.role==="user"?"u":""}`}>
+                {m.role==="assistant" && <div className="ai-av">👨‍🍳</div>}
+                <div className="ai-b">{m.text}</div>
+                {m.role==="user" && <div className="ai-av">🙋</div>}
               </div>
             ))}
-            {loading && <div className="ai-msg"><div className="ai-avatar">👨‍🍳</div><div className="ai-bubble" style={{ color: "#94a3b8" }}>{t.thinking}</div></div>}
-            <div ref={bottomRef} />
+            {loading && <div className="ai-m"><div className="ai-av">👨‍🍳</div><div className="ai-b" style={{color:"var(--text-3)"}}>{t.think}</div></div>}
+            <div ref={ref}/>
           </div>
-          <div className="ai-input-row">
-            <input className="ai-input" value={input} placeholder={t.placeholder} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} />
+          <div className="ai-in-row">
+            <input className="ai-in" value={inp} placeholder={t.ph} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}/>
             <button className="ai-send" onClick={send} disabled={loading}>{t.send}</button>
           </div>
         </div>
@@ -497,143 +673,160 @@ function AIChat({ lang, pantryItems }) {
   );
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-function Dashboard({ lang, pantryItems, onNav }) {
-  const t = T[lang].dashboard;
-  const expiring = pantryItems.filter(i => i.days_left <= 3).sort((a, b) => a.days_left - b.days_left);
-  const ready = RECIPES.filter(r => r.match === 100).length;
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function Auth({ lang, setLang, onLogin }) {
+  const t = T[lang].auth;
+  const [mode, setMode] = useState("signin");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit() {
+    if (!email||!pw) return;
+    setLoading(true); setErr(null);
+    // Demo login — replace with real Supabase auth
+    setTimeout(() => { onLogin({ email, id:"demo-user" }); setLoading(false); }, 900);
+  }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div className="page-title">{t.title}</div>
-        <div className="page-subtitle">{t.subtitle}</div>
-      </div>
-      <div className="stat-grid">
-        <div className="stat-card"><div className="stat-icon">⚠️</div><div className="stat-label">{t.expiring}</div><div className="stat-number">{expiring.length}</div><span className="stat-badge badge-red">{t.urgent}</span></div>
-        <div className="stat-card"><div className="stat-icon">🍳</div><div className="stat-label">{t.recipes_ready}</div><div className="stat-number">{ready}</div><span className="stat-badge badge-green">100% match</span></div>
-        <div className="stat-card"><div className="stat-icon">🗄️</div><div className="stat-label">{lang === "pt" ? "Itens na Despensa" : "Pantry Items"}</div><div className="stat-number">{pantryItems.length}</div><span className="stat-badge badge-orange">{lang === "pt" ? "itens" : "items"}</span></div>
-        <div className="stat-card"><div className="stat-icon">🌱</div><div className="stat-label">{t.waste_score}</div><div className="stat-number">87</div><span className="stat-badge badge-green">/100</span></div>
-      </div>
-      {expiring.length > 0 && (
-        <div>
-          <div className="section-header">
-            <div className="section-title">🔥 {t.cook_before}</div>
-            <button className="view-all-btn" onClick={() => onNav("pantry")}>{t.view_all} →</button>
-          </div>
-          <div className="expiry-list">
-            {expiring.map(item => (
-              <div key={item.id} className={`expiry-item ${expiryClass(item.days_left)}`}>
-                <div className="expiry-emoji">{item.emoji}</div>
-                <div>
-                  <div className="expiry-name">{item.name}</div>
-                  <div className={`expiry-days ${expiryClass(item.days_left)}`}>
-                    {item.days_left <= 1 ? t.expires_tomorrow : `${t.expires_in} ${item.days_left} ${t.days}`}
-                  </div>
-                </div>
-                <button className="expiry-recipe-btn" onClick={() => onNav("recipes")}>{lang === "pt" ? "Ver receitas" : "Find recipes"} →</button>
-              </div>
-            ))}
-          </div>
+    <div className="auth-wrap">
+      <div className="auth-bg"/>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <div className="auth-gem">🥗</div>
+          <div className="auth-brand">Smart Pantry Chef</div>
         </div>
-      )}
+        <div className="auth-title">{t.welcome}</div>
+        <div className="auth-sub">{t.sub}</div>
+        {err && <div className="auth-err">⚠️ {err}</div>}
+        <button className="auth-google" onClick={() => onLogin({ email:"google@user.com", id:"google-user" })}>
+          <span style={{fontSize:18}}>🇬</span> {t.google}
+        </button>
+        <div className="divider"><div className="div-line"/><span className="div-txt">{t.or}</span><div className="div-line"/></div>
+        <div className="f-group"><label className="f-label">{t.email}</label><input className="f-input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu@email.com"/></div>
+        <div className="f-group"><label className="f-label">{t.password}</label><input className="f-input" type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
+        <button className="auth-btn" onClick={submit} disabled={loading}>{loading ? <span className="spin"/> : (mode==="signin"?t.signin:t.signup)}</button>
+        <div className="auth-tog"><button onClick={()=>setMode(m=>m==="signin"?"signup":"signin")}>{mode==="signin"?t.tog_up:t.tog_in}</button></div>
+        <div style={{textAlign:"center",marginTop:16}}>
+          <button className="pill-btn" style={{display:"inline-flex",margin:"0 auto"}} onClick={()=>setLang(l=>l==="pt"?"en":"pt")}>🌐 {T[lang].lang}</button>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Pantry ────────────────────────────────────────────────────────────────────
-function Pantry({ lang, user, items, setItems }) {
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function Dashboard({ lang, pantry, onNav }) {
+  const t = T[lang].dash;
+  const expiring = pantry.filter(i => i.days_left <= 3).sort((a,b) => a.days_left - b.days_left);
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div className="page-eyebrow">Smart Pantry Chef</div>
+        <div className="page-title">{t.hi}</div>
+        <div className="page-sub">{t.sub}</div>
+      </div>
+      <div className="stat-row">
+        <div className="stat-box"><div className="stat-icon">⚠️</div><div className="stat-lbl">{t.exp}</div><div className="stat-num">{expiring.length}</div><span className="stat-tag tag-red">{t.urgent}</span></div>
+        <div className="stat-box"><div className="stat-icon">🍳</div><div className="stat-lbl">{t.rdy}</div><div className="stat-num">{RECIPES_DATA.filter(r=>r.match===100).length}</div><span className="stat-tag tag-green">100% match</span></div>
+        <div className="stat-box"><div className="stat-icon">🗄️</div><div className="stat-lbl">{t.items}</div><div className="stat-num">{pantry.length}</div><span className="stat-tag tag-amber">{lang==="pt"?"itens":"items"}</span></div>
+        <div className="stat-box"><div className="stat-icon">🌱</div><div className="stat-lbl">{t.score}</div><div className="stat-num">87</div><span className="stat-tag tag-green">/100</span></div>
+      </div>
+      {expiring.length > 0 && <>
+        <div className="sec-hd"><div className="sec-title">🔥 {t.cook}</div><button className="sec-link" onClick={()=>onNav("pantry")}>{t.all} →</button></div>
+        <div className="expiry-stack">
+          {expiring.map(item => (
+            <div key={item.id} className={`expiry-row ${exc(item.days_left)}`}>
+              <div className="exp-ico">{item.emoji}</div>
+              <div><div className="exp-name">{item.name}</div><div className={`exp-days ${exc(item.days_left)}`}>{item.days_left<=1?t.tmw:`${t.in} ${item.days_left} ${t.days}`}</div></div>
+              <button className="exp-cta" onClick={()=>onNav("recipes")}>{lang==="pt"?"Ver receitas":"Find recipes"} →</button>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
+}
+
+// ── PANTRY ─────────────────────────────────────────────────────────────────────
+function Pantry({ lang, items, setItems, user }) {
   const t = T[lang].pantry;
   const [search, setSearch] = useState("");
   const [cat, setCat] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, showToast] = useToast();
-  const [form, setForm] = useState({ name: "", qty: "1", unit: "un", category: "Fridge", exp: "", emoji: "🥘" });
-  const catMap = { 1: "Fridge", 2: "Freezer", 3: "Pantry", 4: "Spices" };
+  const [form, setForm] = useState({ name:"", qty:"1", unit:"un", category:"Fridge", exp:"", emoji:"🥘" });
+  const catMap = { 1:"Fridge", 2:"Freezer", 3:"Pantry", 4:"Spices" };
+  const EMOJIS = ["🥚","🥛","🧀","🍅","🧅","🧄","🍗","🍚","🫘","🥬","🍄","🫙","🥩","🐟","🥕","🌽","🍋","🫐","🧈","🥦","🍎","🥑","🧆","🌶️","🍠"];
 
   const filtered = items.filter(i => {
-    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = cat === 0 || i.location === catMap[cat];
-    return matchSearch && matchCat;
+    const ms = i.name.toLowerCase().includes(search.toLowerCase());
+    const mc = cat===0 || i.location===catMap[cat];
+    return ms && mc;
   });
 
-  async function addItem() {
+  function addItem() {
     if (!form.name.trim()) return;
     setSaving(true);
-    const newItem = { user_id: user.id, name: form.name, qty: Number(form.qty) || 1, unit: form.unit, location: form.category, category: form.category, days_left: form.exp ? Math.max(0, Math.ceil((new Date(form.exp) - new Date()) / 86400000)) : 14, emoji: form.emoji };
-    const { data, error } = await supabase.from("pantry_items").insert(newItem).select().single();
-    if (!error && data) { setItems(prev => [data, ...prev]); showToast(`✅ ${form.name} ${lang === "pt" ? "adicionado!" : "added!"}`); }
-    else showToast("❌ " + (error?.message || "Error"));
+    const ni = { id:`local-${Date.now()}`, user_id:user?.id, name:form.name, qty:Number(form.qty)||1, unit:form.unit, location:form.category, category:form.category, days_left:form.exp?Math.max(0,Math.ceil((new Date(form.exp)-new Date())/86400000)):14, emoji:form.emoji };
+    setItems(p => [ni,...p]);
+    showToast(`✅ ${form.name} ${lang==="pt"?"adicionado!":"added!"}`);
     setShowAdd(false); setSaving(false);
-    setForm({ name: "", qty: "1", unit: "un", category: "Fridge", exp: "", emoji: "🥘" });
+    setForm({ name:"", qty:"1", unit:"un", category:"Fridge", exp:"", emoji:"🥘" });
   }
 
-  async function deleteItem(id) {
-    await supabase.from("pantry_items").delete().eq("id", id);
-    setItems(prev => prev.filter(i => i.id !== id));
-    showToast(lang === "pt" ? "🗑️ Item removido" : "🗑️ Item removed");
+  function del(id) {
+    setItems(p=>p.filter(i=>i.id!==id));
+    showToast(lang==="pt"?"🗑️ Removido":"🗑️ Removed");
   }
-
-  const EMOJIS = ["🥚","🥛","🧀","🍅","🧅","🧄","🍗","🍚","🫘","🥬","🍄","🫙","🥩","🐟","🥕","🌽","🍋","🫐","🧈","🥦"];
 
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">{t.title}</div><div className="page-subtitle">{t.subtitle}</div></div>
-      <div className="pantry-toolbar">
-        <input className="search-input" placeholder={t.search} value={search} onChange={e => setSearch(e.target.value)} />
-        <button className="btn btn-secondary btn-sm" onClick={() => showToast(lang === "pt" ? "📷 Em breve!" : "📷 Coming soon!")}>{t.import_receipt}</button>
-        <button className="btn btn-secondary btn-sm" onClick={() => showToast(lang === "pt" ? "🎙️ Em breve!" : "🎙️ Coming soon!")}>{t.voice}</button>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ {t.add}</button>
+      <div className="page-head"><div className="page-eyebrow">{lang==="pt"?"Inventário":"Inventory"}</div><div className="page-title">{t.title}</div><div className="page-sub">{t.sub}</div></div>
+      <div className="toolbar">
+        <input className="search-bar" style={{flex:1,minWidth:180}} placeholder={t.search} value={search} onChange={e=>setSearch(e.target.value)}/>
+        <button className="btn btn-ghost btn-sm" onClick={()=>showToast(lang==="pt"?"📷 Em breve!":"📷 Coming soon!")}>{t.receipt}</button>
+        <button className="btn btn-ghost btn-sm" onClick={()=>showToast(lang==="pt"?"🎙️ Em breve!":"🎙️ Coming soon!")}>{t.voice}</button>
+        <button className="btn btn-green" onClick={()=>setShowAdd(true)}>+ {t.add}</button>
       </div>
-      <div className="cat-tabs">{t.categories.map((c, i) => <button key={i} className={`cat-tab ${cat === i ? "active" : ""}`} onClick={() => setCat(i)}>{c}</button>)}</div>
-
-      {filtered.length === 0 ? (
-        <div className="empty-state"><div className="empty-state-emoji">🗄️</div><div className="empty-state-text">{t.empty}</div></div>
-      ) : (
-        <div className="pantry-grid">
-          {filtered.map(item => (
-            <div key={item.id} className="pantry-card">
-              <button className="delete-btn" onClick={() => deleteItem(item.id)}>✕</button>
-              <div className="pantry-card-top">
-                <div className="pantry-emoji-circle">{item.emoji}</div>
-                <span className={`days-badge ${daysBadgeClass(item.days_left)}`}>{item.days_left <= 1 ? (lang === "pt" ? "Amanhã!" : "Tomorrow!") : `${item.days_left}d`}</span>
+      <div className="chips">{t.cats.map((c,i)=><button key={i} className={`chip ${cat===i?"on":""}`} onClick={()=>setCat(i)}>{c}</button>)}</div>
+      {filtered.length===0
+        ? <div className="empty-st"><div className="empty-ico">🗄️</div><div className="empty-txt">{t.empty}</div></div>
+        : <div className="pantry-grid">{filtered.map(item=>(
+            <div key={item.id} className="p-card">
+              <button className="del-x" onClick={()=>del(item.id)}>✕</button>
+              <div className="p-card-top">
+                <div className="p-ico">{item.emoji}</div>
+                <span className={`d-badge ${dbg(item.days_left)}`}>{item.days_left<=1?(lang==="pt"?"Amanhã!":"Tomorrow!"):`${item.days_left}d`}</span>
               </div>
-              <div className="pantry-name">{item.name}</div>
-              <div className="pantry-details">
-                <div className="pantry-detail-item">{t.qty}: <span>{item.qty} {item.unit}</span></div>
-                <div className="pantry-detail-item">{t.location}: <span>{item.location}</span></div>
-              </div>
+              <div className="p-name">{item.name}</div>
+              <div className="p-meta">{t.qty}: <span>{item.qty} {item.unit}</span>&nbsp;&nbsp;{t.loc}: <span>{item.location}</span></div>
             </div>
-          ))}
-        </div>
-      )}
+          ))}</div>
+      }
 
       {showAdd && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowAdd(false)}>
+        <div className="overlay" onClick={e=>e.target===e.currentTarget&&setShowAdd(false)}>
           <div className="modal">
-            <div className="modal-header">
-              <div><div className="modal-title">{t.add_modal_title}</div></div>
-              <button className="modal-close" onClick={() => setShowAdd(false)}>✕</button>
+            <div className="m-head" style={{position:"relative"}}>
+              <div className="m-title">{t.modal_t}</div>
+              <button className="m-close" onClick={()=>setShowAdd(false)}>✕</button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">{lang === "pt" ? "Emoji" : "Emoji"}</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {EMOJIS.map(e => <button key={e} onClick={() => setForm(f => ({ ...f, emoji: e }))} style={{ fontSize: 22, background: form.emoji === e ? "var(--g100)" : "var(--gray50)", border: form.emoji === e ? "2px solid var(--g500)" : "1px solid var(--gray200)", borderRadius: 8, padding: "4px 8px", cursor: "pointer" }}>{e}</button>)}
-                </div>
+            <div className="m-body">
+              <div className="f-group"><label className="f-label">Emoji</label><div className="emoji-grid">{EMOJIS.map(e=><button key={e} className={`e-btn ${form.emoji===e?"sel":""}`} onClick={()=>setForm(f=>({...f,emoji:e}))}>{e}</button>)}</div></div>
+              <div className="f-group"><label className="f-label">{t.name}</label><input className="f-input" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={lang==="pt"?"Ex: Ovos":"Ex: Eggs"}/></div>
+              <div className="f-row">
+                <div className="f-group"><label className="f-label">{t.quantity}</label><input className="f-input" type="number" value={form.qty} onChange={e=>setForm(f=>({...f,qty:e.target.value}))}/></div>
+                <div className="f-group"><label className="f-label">{t.unit}</label><select className="f-input" value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}><option>un</option><option>g</option><option>kg</option><option>ml</option><option>L</option></select></div>
               </div>
-              <div className="form-group"><label className="form-label">{t.name}</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={lang === "pt" ? "Ex: Ovos" : "Ex: Eggs"} /></div>
-              <div className="form-row">
-                <div className="form-group"><label className="form-label">{t.quantity}</label><input className="form-input" type="number" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: e.target.value }))} /></div>
-                <div className="form-group"><label className="form-label">{t.unit}</label><select className="form-input" value={form.unit} onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}><option>un</option><option>g</option><option>kg</option><option>ml</option><option>L</option></select></div>
-              </div>
-              <div className="form-group"><label className="form-label">{t.category}</label><select className="form-input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}><option>Fridge</option><option>Freezer</option><option>Pantry</option><option>Spices</option></select></div>
-              <div className="form-group"><label className="form-label">{t.exp_date}</label><input className="form-input" type="date" value={form.exp} onChange={e => setForm(f => ({ ...f, exp: e.target.value }))} /></div>
+              <div className="f-group"><label className="f-label">{t.cat}</label><select className="f-input" value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}><option>Fridge</option><option>Freezer</option><option>Pantry</option><option>Spices</option></select></div>
+              <div className="f-group"><label className="f-label">{t.exp}</label><input className="f-input" type="date" value={form.exp} onChange={e=>setForm(f=>({...f,exp:e.target.value}))}/></div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowAdd(false)}>{t.cancel}</button>
-              <button className="btn btn-primary" onClick={addItem} disabled={saving}>{saving ? <span className="spinner" /> : t.save}</button>
+            <div className="m-foot">
+              <button className="btn btn-ghost" onClick={()=>setShowAdd(false)}>{t.cancel}</button>
+              <button className="btn btn-green" onClick={addItem} disabled={saving}>{saving?<span className="spin"/>:t.save}</button>
             </div>
           </div>
         </div>
@@ -643,69 +836,67 @@ function Pantry({ lang, user, items, setItems }) {
   );
 }
 
-// ── Recipes ───────────────────────────────────────────────────────────────────
+// ── RECIPES ───────────────────────────────────────────────────────────────────
 function Recipes({ lang }) {
   const t = T[lang].recipes;
   const [tab, setTab] = useState("all");
-  const [selected, setSelected] = useState(null);
+  const [sel, setSel] = useState(null);
   const [toast, showToast] = useToast();
-  const tabs = [{ key: "all", label: lang === "pt" ? "Todas" : "All", count: RECIPES.length }, { key: "100", label: t.can_cook, count: RECIPES.filter(r => r.match === 100).length }, { key: "95", label: t.almost, count: RECIPES.filter(r => r.match >= 85 && r.match < 100).length }, { key: "70", label: t.shopping_needed, count: RECIPES.filter(r => r.match < 85).length }];
-  const filtered = RECIPES.filter(r => tab === "all" ? true : tab === "100" ? r.match === 100 : tab === "95" ? r.match >= 85 && r.match < 100 : r.match < 85);
+  const tabs = [
+    {key:"all", label:t.all, n:RECIPES_DATA.length},
+    {key:"100", label:t.cook_now, n:RECIPES_DATA.filter(r=>r.match===100).length},
+    {key:"95",  label:t.almost,   n:RECIPES_DATA.filter(r=>r.match>=85&&r.match<100).length},
+    {key:"70",  label:t.need,     n:RECIPES_DATA.filter(r=>r.match<85).length},
+  ];
+  const list = RECIPES_DATA.filter(r=>tab==="all"?true:tab==="100"?r.match===100:tab==="95"?r.match>=85&&r.match<100:r.match<85);
 
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">{t.title}</div><div className="page-subtitle">{t.subtitle}</div></div>
-      <div className="recipe-tabs">{tabs.map(tb => <button key={tb.key} className={`recipe-tab ${tab === tb.key ? "active" : ""}`} onClick={() => setTab(tb.key)}>{tb.label} <span className="recipe-count">{tb.count}</span></button>)}</div>
+      <div className="page-head"><div className="page-eyebrow">{lang==="pt"?"Com base na sua despensa":"Based on your pantry"}</div><div className="page-title">{t.title}</div><div className="page-sub">{t.sub}</div></div>
+      <div className="r-tabs">{tabs.map(tb=><button key={tb.key} className={`r-tab ${tab===tb.key?"on":""}`} onClick={()=>setTab(tb.key)}>{tb.label}<span className="r-cnt">{tb.n}</span></button>)}</div>
       <div className="recipes-grid">
-        {filtered.map(recipe => (
-          <div key={recipe.id} className="recipe-card" onClick={() => setSelected(recipe)}>
-            <div className={`recipe-banner recipe-banner-${recipe.match}`}><span style={{ fontSize: 52 }}>{recipe.emoji}</span><span className={`match-pill match-${recipe.match}`}>{recipe.match}% {t.match}</span></div>
-            <div className="recipe-body">
-              <div className="recipe-title">{recipe.title}</div>
-              <div className="recipe-desc">{recipe.description}</div>
-              <div className="recipe-meta"><span>⏱ {recipe.time} {t.minutes}</span><span>👤 {recipe.servings} {t.servings}</span><span>⭐ {t.difficulty[recipe.difficulty]}</span></div>
-              {recipe.missing.length > 0 && <div className="recipe-missing"><div className="recipe-missing-title">⚠️ {t.missing} {recipe.missing.length}:</div><div className="recipe-missing-items">{recipe.missing.join(", ")}</div></div>}
-              <div className="recipe-actions">
-                <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); setSelected(recipe); }}>{t.cook_now}</button>
-                <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); showToast(`❤️ ${recipe.title} ${lang === "pt" ? "salva!" : "saved!"}`); }}>♡ {t.save}</button>
+        {list.map(r=>(
+          <div key={r.id} className="r-card" onClick={()=>setSel(r)}>
+            <div className="r-photo" style={{backgroundImage:`url(${r.img})`}}>
+              {!r.img && <div className="r-photo-emoji">{r.emoji}</div>}
+              <div className="r-photo-overlay"/>
+              <span className={`r-match-pill ${matchPill(r.match)}`} style={{position:"absolute",top:12,right:12}}>{r.match}% {t.match}</span>
+            </div>
+            <div className="r-body">
+              <div className="r-title">{r.title}</div>
+              <div className="r-desc">{r.desc}</div>
+              <div className="r-meta"><span>⏱ {r.time} {t.min}</span><span>👤 {r.serv} {t.serv}</span><span>⭐ {t.diff[r.diff]}</span></div>
+              {r.missing.length>0 && <div className="r-missing"><div className="r-miss-t">{t.miss_lbl} {r.missing.length}:</div><div className="r-miss-i">{r.missing.join(", ")}</div></div>}
+              <div className="r-acts">
+                <button className="btn btn-green btn-sm" onClick={e=>{e.stopPropagation();setSel(r);}}>{t.cook}</button>
+                <button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();showToast(`❤️ ${r.title} ${lang==="pt"?"salva!":"saved!"}`);}}>{t.save}</button>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {selected && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setSelected(null)}>
+      {sel && (
+        <div className="overlay" onClick={e=>e.target===e.currentTarget&&setSel(null)}>
           <div className="modal">
-            <div className="modal-header">
-              <div className="modal-emoji">{selected.emoji}</div>
-              <div><div className="modal-title">{selected.title}</div><div className="modal-subtitle">{selected.cuisine} · {selected.time} {t.minutes}</div></div>
-              <button className="modal-close" onClick={() => setSelected(null)}>✕</button>
+            <div className="m-banner" style={{backgroundImage:`url(${sel.img})`,backgroundSize:"cover",backgroundPosition:"center"}}>
+              {!sel.img && sel.emoji}
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(10,26,16,0) 40%,rgba(15,35,24,0.95))",borderRadius:"28px 28px 0 0"}}/>
+              <button className="m-close" onClick={()=>setSel(null)}>✕</button>
             </div>
-            <div className="modal-body">
-              <div className="modal-section">
-                <div className="modal-section-title">{lang === "pt" ? "Nutrição" : "Nutrition"}</div>
-                <div className="nutrition-grid">
-                  <div className="nutrition-item"><div className="nutrition-value">{selected.calories}</div><div className="nutrition-label">kcal</div></div>
-                  <div className="nutrition-item"><div className="nutrition-value">{selected.protein}g</div><div className="nutrition-label">{lang === "pt" ? "Proteína" : "Protein"}</div></div>
-                  <div className="nutrition-item"><div className="nutrition-value">{selected.servings}</div><div className="nutrition-label">{t.servings}</div></div>
-                </div>
-              </div>
-              <div className="modal-section">
-                <div className="modal-section-title">{lang === "pt" ? "Modo de Preparo" : "Instructions"}</div>
-                <div className="steps-list">{selected.steps.map((s, i) => <div key={i} className="step-item"><div className="step-num">{i + 1}</div><div className="step-text">{s}</div></div>)}</div>
-              </div>
-              <div className="modal-section">
-                <div className="modal-section-title">{lang === "pt" ? "Vídeo da Receita" : "Recipe Video"}</div>
-                <div className="video-card" onClick={() => showToast("🎥 YouTube...")}>
-                  <div className="video-thumb">▶️</div>
-                  <div><div className="video-title">{selected.title}</div><div className="video-meta">📺 {selected.videoChannel} · {selected.videoDuration} · 👁 {selected.videoViews}</div><div style={{ marginTop: 6 }}><span style={{ fontSize: 12, color: "var(--g600)", fontWeight: 700 }}>{t.watch_video}</span></div></div>
-                </div>
-              </div>
+            <div className="m-head">
+              <div className="m-title">{sel.title}</div>
+              <div className="m-sub">{sel.cuisine} · {sel.time} {t.min} · {t.diff[sel.diff]}</div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setSelected(null)}>{lang === "pt" ? "Fechar" : "Close"}</button>
-              <button className="btn btn-primary">{t.cook_now} 👨‍🍳</button>
+            <div className="m-body">
+              <div className="m-sec"><div className="m-sec-t">{t.nutr}</div><div className="nutri"><div className="n-box"><div className="n-val">{sel.cal}</div><div className="n-lbl">kcal</div></div><div className="n-box"><div className="n-val">{sel.prot}g</div><div className="n-lbl">{lang==="pt"?"Proteína":"Protein"}</div></div><div className="n-box"><div className="n-val">{sel.serv}</div><div className="n-lbl">{t.serv}</div></div></div></div>
+              <div className="m-sec"><div className="m-sec-t">{t.prep}</div><div className="steps">{sel.steps.map((s,i)=><div key={i} className="step"><div className="step-n">{i+1}</div><div className="step-t">{s}</div></div>)}</div></div>
+              <div className="m-sec"><div className="m-sec-t">{t.vid}</div><div className="vid-card" onClick={()=>showToast("🎥 YouTube...")}><div className="vid-thumb">▶️</div><div><div className="vid-t">{sel.title}</div><div className="vid-m">📺 {sel.chan} · {sel.dur} · 👁 {sel.views}</div><div style={{marginTop:5,fontSize:12,color:"var(--green)",fontWeight:700}}>{t.watch}</div></div></div></div>
+            </div>
+            <div className="m-foot">
+              <button className="btn btn-ghost" onClick={()=>setSel(null)}>{t.close}</button>
+              <button className="btn btn-amber" onClick={()=>{showToast("🛒 "+lang==="pt"?"Adicionado!":"Added!");setSel(null);}}>{t.add_shop}</button>
+              <button className="btn btn-green">{t.cook} 👨‍🍳</button>
             </div>
           </div>
         </div>
@@ -715,88 +906,69 @@ function Recipes({ lang }) {
   );
 }
 
-// ── Shopping ──────────────────────────────────────────────────────────────────
-function Shopping({ lang, user }) {
+// ── SHOPPING ──────────────────────────────────────────────────────────────────
+function Shopping({ lang }) {
   const t = T[lang].shopping;
-  const [items, setItems] = useState([]);
-  const [toast, showToast] = useToast();
+  const [items, setItems] = useState(SHOP_MOCK);
   const [newItem, setNewItem] = useState("");
+  const [toast, showToast] = useToast();
 
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("shopping_items").select("*").eq("user_id", user.id).order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setItems(data); });
-  }, [user]);
-
-  async function toggle(id, checked) {
-    await supabase.from("shopping_items").update({ checked: !checked }).eq("id", id);
-    setItems(prev => prev.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
-  }
-
-  async function addItem() {
+  function toggle(id) { setItems(p=>p.map(i=>i.id===id?{...i,checked:!i.checked}:i)); }
+  function clearChecked() { setItems(p=>p.filter(i=>!i.checked)); showToast(lang==="pt"?"✅ Removidos!":"✅ Removed!"); }
+  function add() {
     if (!newItem.trim()) return;
-    const item = { user_id: user.id, name: newItem, qty: "1 un", category: "General", checked: false, price: 0 };
-    const { data } = await supabase.from("shopping_items").insert(item).select().single();
-    if (data) { setItems(prev => [data, ...prev]); setNewItem(""); }
+    setItems(p=>[{ id:`s${Date.now()}`, name:newItem, qty:"1 un", category:"Geral", checked:false, price:0 },...p]);
+    setNewItem("");
   }
 
-  async function clearChecked() {
-    const ids = items.filter(i => i.checked).map(i => i.id);
-    if (!ids.length) return;
-    await supabase.from("shopping_items").delete().in("id", ids);
-    setItems(prev => prev.filter(i => !i.checked));
-    showToast(lang === "pt" ? "✅ Itens marcados removidos!" : "✅ Checked items removed!");
-  }
-
-  const total = items.filter(i => !i.checked).reduce((s, i) => s + (i.price || 0), 0).toFixed(2);
+  const total = items.filter(i=>!i.checked).reduce((s,i)=>s+(i.price||0),0).toFixed(2);
 
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">{t.title}</div><div className="page-subtitle">{t.subtitle} — {items.filter(i => !i.checked).length} {t.items}</div></div>
-      <div className="shopping-toolbar">
-        <input className="search-input" placeholder={lang === "pt" ? "Adicionar item..." : "Add item..."} value={newItem} onChange={e => setNewItem(e.target.value)} onKeyDown={e => e.key === "Enter" && addItem()} style={{ flex: 1 }} />
-        <button className="btn btn-primary" onClick={addItem}>+ {t.add_item}</button>
-        <button className="btn btn-secondary" onClick={clearChecked}>🗑 {t.clear}</button>
+      <div className="page-head"><div className="page-eyebrow">{lang==="pt"?"Lista":"List"}</div><div className="page-title">{t.title}</div><div className="page-sub">{t.sub} — {items.filter(i=>!i.checked).length} {t.items}</div></div>
+      <div className="toolbar">
+        <input className="search-bar" style={{flex:1}} placeholder={t.add_ph} value={newItem} onChange={e=>setNewItem(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()}/>
+        <button className="btn btn-green" onClick={add}>+ {t.add}</button>
+        <button className="btn btn-ghost" onClick={clearChecked}>🗑 {t.clear}</button>
       </div>
-      {items.length === 0 ? (
-        <div className="empty-state"><div className="empty-state-emoji">🛒</div><div className="empty-state-text">{t.empty}</div></div>
-      ) : (
-        <div className="shopping-list-items">
-          {items.map(item => (
-            <div key={item.id} className={`shopping-item ${item.checked ? "checked" : ""}`}>
-              <div className={`checkbox ${item.checked ? "checked" : ""}`} onClick={() => toggle(item.id, item.checked)}>{item.checked && <span style={{ color: "white", fontSize: 13 }}>✓</span>}</div>
-              <div><div className="shopping-name" style={{ textDecoration: item.checked ? "line-through" : "none" }}>{item.name}</div><div className="shopping-qty">{item.qty}</div></div>
-              <div className="shopping-category">{item.category}</div>
-              {item.price > 0 && <div className="shopping-price">R$ {item.price.toFixed(2)}</div>}
+      {items.length===0
+        ? <div className="empty-st"><div className="empty-ico">🛒</div><div className="empty-txt">{t.empty}</div></div>
+        : <div className="s-items">{items.map(item=>(
+            <div key={item.id} className={`s-row ${item.checked?"done":""}`}>
+              <div className={`chk ${item.checked?"on":""}`} onClick={()=>toggle(item.id)}>{item.checked&&<span style={{color:"var(--ink)",fontSize:12}}>✓</span>}</div>
+              <div><div className="s-name" style={{textDecoration:item.checked?"line-through":"none"}}>{item.name}</div><div className="s-qty">{item.qty}</div></div>
+              <div className="s-cat">{item.category}</div>
+              {item.price>0 && <div className="s-price">R$ {item.price.toFixed(2)}</div>}
             </div>
-          ))}
-        </div>
-      )}
-      {items.length > 0 && <div className="shopping-total"><div className="shopping-total-label">💰 {t.total_est}</div><div className="shopping-total-value">R$ {total}</div></div>}
+          ))}</div>
+      }
+      {items.length>0 && <div className="s-total"><div className="s-total-l">💰 {t.total}</div><div className="s-total-v">R$ {total}</div></div>}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
 
-// ── Meal Planner ──────────────────────────────────────────────────────────────
-function MealPlanner({ lang }) {
+// ── MEAL PLANNER ──────────────────────────────────────────────────────────────
+function Planner({ lang }) {
   const t = T[lang].planner;
   const [toast, showToast] = useToast();
-  const days = lang === "pt" ? WEEK_DAYS_PT : WEEK_DAYS;
-  const meals = [{ key: "breakfast", label: t.breakfast, emoji: "☀️" }, { key: "lunch", label: t.lunch, emoji: "🌤" }, { key: "dinner", label: t.dinner, emoji: "🌙" }, { key: "snack", label: t.snack, emoji: "🍎" }];
+  const meals = Object.entries(t.meals);
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">{t.title}</div><div className="page-subtitle">{t.subtitle}</div></div>
-      <div className="week-grid">
-        {WEEK_DAYS.map((dk, di) => (
+      <div className="page-head"><div className="page-eyebrow">{lang==="pt"?"Planejamento":"Planning"}</div><div className="page-title">{t.title}</div><div className="page-sub">{t.sub}</div></div>
+      <div className="week-g">
+        {DAY_KEYS.map((dk,di)=>(
           <div key={dk} className="day-col">
-            <div className={`day-label ${di === 0 ? "today" : ""}`}>{days[di]}</div>
-            {meals.map(meal => {
-              const planned = MEAL_PLAN[dk]?.[meal.key];
+            <div className={`day-hd ${di===0?"today":""}`}>{t.days[di]}</div>
+            {meals.map(([mk,ml])=>{
+              const planned = MEAL_PLAN[dk]?.[mk];
               return (
-                <div key={meal.key}>
-                  <div className="meal-type-label">{meal.emoji} {meal.label}</div>
-                  {planned ? <div className="meal-slot">{planned}</div> : <div className="meal-slot empty" onClick={() => showToast(`➕ ${meal.label}`)}>+</div>}
+                <div key={mk}>
+                  <div className="meal-t">{ml}</div>
+                  {planned
+                    ? <div className="meal-slot">{planned}</div>
+                    : <div className="meal-slot empty" onClick={()=>showToast(`➕ ${ml}`)}>+</div>
+                  }
                 </div>
               );
             })}
@@ -808,121 +980,97 @@ function MealPlanner({ lang }) {
   );
 }
 
-// ── Waste Score ───────────────────────────────────────────────────────────────
-function WasteScore({ lang }) {
+// ── WASTE ─────────────────────────────────────────────────────────────────────
+function Waste({ lang }) {
   const t = T[lang].waste;
   const score = 87;
   return (
     <div className="page">
-      <div className="page-header"><div className="page-title">{t.title}</div><div className="page-subtitle">{t.subtitle}</div></div>
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="score-hero">
-          <ScoreRing score={score} />
-          <div className="score-label">{t.score_label}</div>
-          <div className="score-message">{t.excellent}</div>
-        </div>
+      <div className="page-head"><div className="page-eyebrow">{lang==="pt"?"Sustentabilidade":"Sustainability"}</div><div className="page-title">{t.title}</div><div className="page-sub">{t.sub}</div></div>
+      <div style={{background:"var(--ink-2)",border:"1px solid var(--border)",borderRadius:"var(--r3)",marginBottom:20}}>
+        <div className="score-hero"><Ring score={score}/><div style={{fontSize:14,color:"var(--text-3)",marginTop:4}}>{t.score_lbl}</div><div className="score-msg">{t.great}</div></div>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 16, color: "var(--gray800)", marginBottom: 14 }}>📊 {t.this_month}</div>
-      <div className="impact-grid">
-        {[{ emoji: "💰", value: "R$ 87,50", label: t.money_saved }, { emoji: "🦸", value: "14", label: t.rescued }, { emoji: "👨‍🍳", value: "23", label: t.cooked }, { emoji: "🌱", value: "2.3 kg", label: t.reduction }].map((item, i) => (
-          <div key={i} className="impact-card"><div className="impact-emoji">{item.emoji}</div><div className="impact-value">{item.value}</div><div className="impact-label">{item.label}</div></div>
+      <div className="sec-hd" style={{marginBottom:12}}><div className="sec-title">📊 {t.month}</div></div>
+      <div className="impact-g">
+        {[{e:"💰",v:"R$ 87,50",l:t.saved},{e:"🦸",v:"14",l:t.rescued},{e:"👨‍🍳",v:"23",l:t.cooked},{e:"🌱",v:"2.3 kg",l:t.reduced}].map((item,i)=>(
+          <div key={i} className="imp-card"><div className="imp-ico">{item.e}</div><div className="imp-val">{item.v}</div><div className="imp-lbl">{item.l}</div></div>
         ))}
       </div>
-      <div className="card" style={{ marginTop: 24 }}>
-        <div className="card-pad">
-          <div style={{ fontWeight: 700, color: "var(--gray700)", marginBottom: 12 }}>📈 {lang === "pt" ? "Histórico Mensal" : "Monthly History"}</div>
-          {["Jan","Feb","Mar","Apr","May","Jun"].map((m, i) => {
-            const v = [62,68,74,79,83,87][i];
-            return (
-              <div key={m} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <div style={{ width: 32, fontSize: 12, color: "var(--gray400)", fontWeight: 600 }}>{m}</div>
-                <div style={{ flex: 1, background: "var(--gray100)", borderRadius: 6, height: 10, overflow: "hidden" }}>
-                  <div style={{ width: `${v}%`, height: "100%", background: `hsl(${100 + v},60%,45%)`, borderRadius: 6 }} />
-                </div>
-                <div style={{ width: 32, fontSize: 12, fontWeight: 700, color: "var(--gray700)" }}>{v}</div>
-              </div>
-            );
-          })}
-        </div>
+      <div className="bar-hist">
+        <div className="bar-hist-t">📈 {t.hist}</div>
+        {["Jan","Fev","Mar","Abr","Mai","Jun"].map((m,i)=>{
+          const v=[62,68,74,79,83,87][i];
+          return (
+            <div key={m} className="bar-row">
+              <div className="bar-lbl">{m}</div>
+              <div className="bar-track"><div className="bar-fill" style={{width:`${v}%`,background:`hsl(${90+v},65%,45%)`}}/></div>
+              <div className="bar-val">{v}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ── App Shell ─────────────────────────────────────────────────────────────────
+// ── APP SHELL ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [session, setSession] = useState(undefined);
   const [lang, setLang] = useState("pt");
   const [page, setPage] = useState("dashboard");
-  const [pantryItems, setPantryItems] = useState([]);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!session?.user) return;
-    supabase.from("pantry_items").select("*").eq("user_id", session.user.id).order("days_left", { ascending: true })
-      .then(({ data }) => { if (data) setPantryItems(data); });
-  }, [session]);
-
-  if (session === undefined) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--gray50)", fontFamily: "var(--font)" }}><div style={{ textAlign: "center" }}><div style={{ fontSize: 48, marginBottom: 16 }}>🥗</div><div style={{ color: "var(--gray400)" }}>Carregando…</div></div></div>;
-  if (!session) return <AuthScreen lang={lang} setLang={setLang} />;
+  const [user, setUser] = useState(null);
+  const [pantry, setPantry] = useState(PANTRY_MOCK);
 
   const t = T[lang];
-  const navItems = [
-    { key: "dashboard", emoji: "🏠", label: t.nav.dashboard },
-    { key: "pantry", emoji: "🗄️", label: t.nav.pantry },
-    { key: "recipes", emoji: "🍳", label: t.nav.recipes },
-    { key: "shopping", emoji: "🛒", label: t.nav.shopping },
-    { key: "planner", emoji: "📅", label: t.nav.planner },
-    { key: "waste", emoji: "🌱", label: t.nav.waste },
+  const nav = [
+    {key:"dashboard", icon:"🏠", label:t.nav.dashboard},
+    {key:"pantry",    icon:"🗄️", label:t.nav.pantry},
+    {key:"recipes",   icon:"🍳", label:t.nav.recipes},
+    {key:"shopping",  icon:"🛒", label:t.nav.shopping},
+    {key:"planner",   icon:"📅", label:t.nav.planner},
+    {key:"waste",     icon:"🌱", label:t.nav.waste},
   ];
 
+  if (!user) return <Auth lang={lang} setLang={setLang} onLogin={setUser}/>;
+
   const pages = {
-    dashboard: <Dashboard lang={lang} pantryItems={pantryItems} onNav={setPage} />,
-    pantry: <Pantry lang={lang} user={session.user} items={pantryItems} setItems={setPantryItems} />,
-    recipes: <Recipes lang={lang} />,
-    shopping: <Shopping lang={lang} user={session.user} />,
-    planner: <MealPlanner lang={lang} />,
-    waste: <WasteScore lang={lang} />,
+    dashboard: <Dashboard lang={lang} pantry={pantry} onNav={setPage}/>,
+    pantry:    <Pantry    lang={lang} items={pantry} setItems={setPantry} user={user}/>,
+    recipes:   <Recipes   lang={lang}/>,
+    shopping:  <Shopping  lang={lang}/>,
+    planner:   <Planner   lang={lang}/>,
+    waste:     <Waste     lang={lang}/>,
   };
 
   return (
     <>
       <style>{CSS}</style>
-      <div className="app-shell">
+      <div className="shell">
         <aside className="sidebar">
-          <div className="sidebar-logo">
-            <div className="logo-mark">
-              <div className="logo-icon">🥗</div>
-              <div><div className="logo-text">Smart Pantry</div><div className="logo-sub">Chef</div></div>
+          <div className="sidebar-brand">
+            <div className="brand-row">
+              <div className="brand-gem">🥗</div>
+              <div><div className="brand-name">Smart Pantry</div><div className="brand-tag">Chef · Premium</div></div>
             </div>
           </div>
-          <nav className="nav-section">
-            {navItems.map(item => (
-              <button key={item.key} className={`nav-item ${page === item.key ? "active" : ""}`} onClick={() => setPage(item.key)}>
-                <span className="nav-emoji">{item.emoji}</span>{item.label}
+          <nav className="nav">
+            {nav.map(item=>(
+              <button key={item.key} className={`nav-item ${page===item.key?"active":""}`} onClick={()=>setPage(item.key)}>
+                <span className="nav-icon">{item.icon}</span>{item.label}
               </button>
             ))}
           </nav>
-          <div className="sidebar-footer">
-            <div style={{ fontSize: 11, color: "var(--gray400)", padding: "0 12px 4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {session.user.email}
+          <div className="sidebar-foot">
+            <div className="user-chip">
+              <div className="user-avatar">👤</div>
+              <div className="user-email">{user.email}</div>
             </div>
-            <button className="lang-btn" onClick={() => setLang(l => l === "pt" ? "en" : "pt")}>
-              🌐 {t.lang === "EN" ? "Switch to EN" : "Mudar para PT"}
-            </button>
-            <button className="signout-btn" onClick={() => supabase.auth.signOut()}>
-              🚪 {t.signout}
-            </button>
+            <button className="pill-btn" onClick={()=>setLang(l=>l==="pt"?"en":"pt")}>🌐 {t.lang}</button>
+            <button className="pill-btn danger" onClick={()=>setUser(null)}>🚪 {t.out}</button>
           </div>
         </aside>
-        <main className="main-content">{pages[page]}</main>
+        <main className="main">{pages[page]}</main>
       </div>
-      <AIChat lang={lang} pantryItems={pantryItems} />
+      <AIChat lang={lang} pantryItems={pantry}/>
     </>
   );
 }
